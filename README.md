@@ -4,7 +4,11 @@ Kleine Android-App zum Üben von Musiktheorie auf der Gitarre. Offline, ohne Acc
 
 - **Griffbrett-Töne:** Ton zu einem Punkt nennen oder alle Stellen eines Tons antippen (Bund 0–12, tiefe E- und A-Saite oder alle 6).
 - **Intervalle:** „Fis + Halbton = ?“, „D − Ganzton = ?“ in drei Schwierigkeitsstufen.
-- **Durtonleiter:** Grundton ist vorgegeben, du gibst die 7 folgenden Töne ein (Stufe 2 bis Oktave). Jede Eingabe prüft genau einen Schritt (Ganz/Halb). Danach siehst du die Tonleiter auf einer Saite als Griffbrett und Tab.
+- **Tonleitern:** Dur und natürliches Moll, nach Quintenzirkel oder zufällig. Der Grundton ist vorgegeben, du gibst die 7 folgenden Töne ein (Stufe 2 bis Oktave). Jede Eingabe prüft genau einen Schritt (Ganz/Halb). Danach siehst du die Tonleiter auf einer Saite als Griffbrett und Tab.
+- **Akkorde:** Dur- und Moll-Dreiklänge. Entweder die drei Töne eingeben (auf der Gitarre höchstens ein Ton pro Saite) oder einen spielbaren Griff bauen, der nach Regeln geprüft und mit dem Standardgriff verglichen wird.
+- **Notenlesen:** Violinschlüssel in Gitarrennotation (klingt eine Oktave tiefer). Bekannte Volkslieder oder Zufallszeilen, die Noten der Reihe nach benennen.
+
+Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
 
 Deutsche Notation (H, B = Bb) ist Standard, englische lässt sich in den Einstellungen wählen. Enharmonische Verwechslungen gelten als richtig.
 
@@ -12,7 +16,7 @@ Deutsche Notation (H, B = Bb) ist Standard, englische lässt sich in den Einstel
 
 | Modul | Inhalt |
 |---|---|
-| `theory/` | Reine Kotlin-Musiklogik ohne Android: Tonnamen, Parser, Intervalle, Durtonleiter, Stimmung, Tab. Mit Unit-Tests. |
+| `theory/` | Reine Kotlin-Musiklogik ohne Android: Tonnamen, Parser, Intervalle, Tonleitern (Dur/Moll, Quintenzirkel), Akkorde und Griffe, Notensystem und Melodien, Stimmung, Tab. Mit Unit-Tests. |
 | `app/` | Jetpack Compose UI (eine Activity), DataStore für Einstellungen und Trefferquoten, AudioTrack-Synth. |
 
 Abhängigkeiten der App: Compose (Foundation, Material 3), `activity-compose`, `datastore-preferences`. Keine Netzwerk-Berechtigung.

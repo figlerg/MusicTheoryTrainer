@@ -34,6 +34,16 @@ data class SpelledNote(val letter: Letter, val alteration: Int = 0) {
     private fun englishName(): String =
         letter.name + if (alteration >= 0) "#".repeat(alteration) else "b".repeat(-alteration)
 
+    /**
+     * The note [letterSteps] letters and [semitones] semitones above this one, spelled with the
+     * right letter: the third of F-Dur is 2 letters and 4 semitones up, so A.
+     */
+    fun above(letterSteps: Int, semitones: Int): SpelledNote {
+        val target = letter.next(letterSteps)
+        val raw = ((pitchClass + semitones).semitone - target.naturalSemitone).mod(12)
+        return SpelledNote(target, if (raw > 6) raw - 12 else raw)
+    }
+
     override fun toString(): String = germanName()
 
     companion object {

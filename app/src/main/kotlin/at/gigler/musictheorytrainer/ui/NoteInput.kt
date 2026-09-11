@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -36,40 +38,100 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import at.gigler.musictheorytrainer.data.InputMode
+import at.gigler.musictheorytrainer.theory.EnteredNote
+import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.Notation
 import at.gigler.musictheorytrainer.theory.NoteNames
-import at.gigler.musictheorytrainer.theory.NoteParser
 import at.gigler.musictheorytrainer.theory.PitchClass
 import at.gigler.musictheorytrainer.theory.Spelling
 
 enum class InputState {
-    /** Waiting for an answer. */
+    /** Waiting for an answer (also after a wrong one: trying again is just answering again). */
     ACCEPTING,
 
     /** Answer given, the screen moves on by itself. */
     LOCKED,
 
-    /** Answer was wrong, the user moves on with "Weiter". */
+    /** Solution shown, the user moves on with "Weiter". */
     CONTINUE,
 }
 
-/** Free text or piano-style keys; [defaultMode] comes from the settings, the other mode is one tap away. */
+/**
+ * Free text, piano keys or a fretboard in first position. [mode] is the saved setting, so a
+ * switch here sticks across questions, screens and restarts. Where the fretboard would give the
+ * answer away ([allowGuitar] = false) the keys stand in for it.
+ */
 @Composable
 fun NoteInput(
     notation: Notation,
-    defaultMode: InputMode,
+    mode: InputMode,
+    onModeChange: (InputMode) -> Unit,
     state: InputState,
-    onNote: (PitchClass) -> Unit,
+    onNote: (EnteredNote) -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
+    allowGuitar: Boolean = true,
+    guitarMarks: List<FretMark> = emptyList(),
+    onUnreadable: () -> Unit = {},
 ) {
-    var mode by rememberSaveable(defaultMode) { mutableStateOf(defaultMode) }
+    val effective = if (mode == InputMode.GUITAR && !allowGuitar) InputMode.KEYS else mode
     Column(modifier.fillMaxWidth()) {
-        when (mode) {
-            InputMode.TEXT -> TextNoteInput(notation, state, onNote, onContinue, onSwitch = { mode = InputMode.KEYS })
-            InputMode.KEYS -> KeyNoteInput(notation, state, onNote, onContinue, onSwitch = { mode = InputMode.TEXT })
+        ModeSwitch(effective, allowGuitar, onModeChange)
+        when (effective) {
+            InputMode.TEXT -> TextNoteInput(notation, state, onNote, onContinue, onUnreadable)
+            InputMode.KEYS -> ContinueOr(state, onContinue, KEY_HEIGHT * 2 + KEY_GAP) {
+                PianoKeys(notation, enabled = state == InputState.ACCEPTING) { onNote(EnteredNote(it)) }
+            }
+            InputMode.GUITAR -> ContinueOr(state, onContinue, GUITAR_KEYS_HEIGHT) {
+                GuitarKeys(
+                    notation = notation,
+                    enabled = state == InputState.ACCEPTING,
+                    marks = guitarMarks,
+                    onTap = { onNote(EnteredNote(Guitar.pitchAt(it), position = it)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModeSwitch(current: InputMode, allowGuitar: Boolean, onModeChange: (InputMode) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        for (mode in InputMode.entries) {
+            if (mode == InputMode.GUITAR && !allowGuitar) continue
+            val selected = mode == current
+            TextButton(
+                onClick = { onModeChange(mode) },
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Text(
+                    when (mode) {
+                        InputMode.TEXT -> "Text"
+                        InputMode.KEYS -> "Tasten"
+                        InputMode.GUITAR -> "Gitarre"
+                    },
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+        }
+    }
+}
+
+/** Keeps the input's height and puts a big "Weiter" where the thumb already is. */
+@Composable
+private fun ContinueOr(state: InputState, onContinue: () -> Unit, height: Dp, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(height)) {
+        if (state == InputState.CONTINUE) {
+            Button(onClick = onContinue, modifier = Modifier.fillMaxSize()) {
+                Text("Weiter", style = MaterialTheme.typography.titleLarge)
+            }
+        } else {
+            content()
         }
     }
 }
@@ -78,9 +140,9 @@ fun NoteInput(
 private fun ColumnScope.TextNoteInput(
     notation: Notation,
     state: InputState,
-    onNote: (PitchClass) -> Unit,
+    onNote: (EnteredNote) -> Unit,
     onContinue: () -> Unit,
-    onSwitch: () -> Unit,
+    onUnreadable: () -> Unit,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
     var unreadable by remember { mutableStateOf(false) }
@@ -92,9 +154,12 @@ private fun ColumnScope.TextNoteInput(
             InputState.LOCKED -> return
             InputState.CONTINUE -> onContinue()
             InputState.ACCEPTING -> {
-                val note = NoteParser.parsePitch(text, notation)
+                val note = EnteredNote.fromText(text, notation)
                 if (note == null) {
-                    unreadable = text.isNotBlank()
+                    if (text.isNotBlank()) {
+                        unreadable = true
+                        onUnreadable()
+                    }
                 } else {
                     text = ""
                     onNote(note)
@@ -127,27 +192,6 @@ private fun ColumnScope.TextNoteInput(
             modifier = Modifier.height(56.dp),
         ) {
             Text(if (state == InputState.CONTINUE) "Weiter" else "OK")
-        }
-    }
-    TextButton(onClick = onSwitch, modifier = Modifier.align(Alignment.End)) { Text("Tasten") }
-}
-
-@Composable
-private fun ColumnScope.KeyNoteInput(
-    notation: Notation,
-    state: InputState,
-    onNote: (PitchClass) -> Unit,
-    onContinue: () -> Unit,
-    onSwitch: () -> Unit,
-) {
-    TextButton(onClick = onSwitch, modifier = Modifier.align(Alignment.End)) { Text("Text") }
-    Box(Modifier.fillMaxWidth().height(KEY_HEIGHT * 2 + KEY_GAP)) {
-        if (state == InputState.CONTINUE) {
-            Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
-                Text("Weiter", style = MaterialTheme.typography.titleLarge)
-            }
-        } else {
-            PianoKeys(notation, enabled = state == InputState.ACCEPTING, onNote = onNote)
         }
     }
 }

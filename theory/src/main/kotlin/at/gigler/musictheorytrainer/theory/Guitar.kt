@@ -42,11 +42,13 @@ object Guitar {
     fun lowestRootString(root: PitchClass, strings: List<Int>): Int =
         strings.minWith(compareBy<Int> { lowestFret(root, it) }.thenBy { it })
 
-    /** Degrees 1..8 of the major scale on one string, e.g. E on the low E string: 0 2 4 5 7 9 11 12. */
-    fun majorScaleOnString(root: PitchClass, string: Int): List<FretPosition> {
+    /** Degrees 1..8 of a scale on one string, e.g. E-Dur on the low E string: 0 2 4 5 7 9 11 12. */
+    fun scaleOnString(root: PitchClass, string: Int, type: ScaleType = ScaleType.MAJOR): List<FretPosition> {
         val rootFret = lowestFret(root, string)
-        return MajorScale.OFFSETS.map { FretPosition(string, rootFret + it) }
+        return type.offsets.map { FretPosition(string, rootFret + it) }
     }
+
+    fun majorScaleOnString(root: PitchClass, string: Int): List<FretPosition> = scaleOnString(root, string)
 }
 
 object FretboardQuiz {

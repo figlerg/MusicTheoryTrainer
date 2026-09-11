@@ -33,108 +33,206 @@ import androidx.compose.ui.unit.dp
 import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
+import at.gigler.musictheorytrainer.theory.Answer
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.Intervals
-import at.gigler.musictheorytrainer.theory.MajorScale
+import at.gigler.musictheorytrainer.theory.Key
+import at.gigler.musictheorytrainer.theory.KeyQuiz
 import at.gigler.musictheorytrainer.theory.Notation
 import at.gigler.musictheorytrainer.theory.PitchClass
 import at.gigler.musictheorytrainer.theory.ScaleDrill
+import at.gigler.musictheorytrainer.theory.ScaleType
+import at.gigler.musictheorytrainer.theory.Spelling
 import at.gigler.musictheorytrainer.theory.SpelledNote
 import at.gigler.musictheorytrainer.theory.Step
 import at.gigler.musictheorytrainer.theory.StepCheck
 import at.gigler.musictheorytrainer.theory.Tab
+import kotlin.random.Random
 
 private val MIN_ROW_HEIGHT = 26.dp
 
+/** A filled slot, coloured by the first attempt. */
+private data class Slot(val note: SpelledNote, val verdict: Verdict)
+
 @Composable
-fun ScaleScreen(settings: Settings, sound: Sound, onResult: (Boolean) -> Unit, onBack: () -> Unit) {
+fun ScaleScreen(
+    settings: Settings,
+    sound: Sound,
+    onResult: (Boolean) -> Unit,
+    updateSettings: ((Settings) -> Settings) -> Unit,
+    onBack: () -> Unit,
+) {
     ScreenScaffold(Exercise.SCALE.title, onBack) {
         val notation = settings.notation
-        var root by remember { mutableStateOf(MajorScale.ROOTS.random()) }
-        val drill = remember(root) { ScaleDrill(root) }
-        var checks by remember(root) { mutableStateOf(emptyList<StepCheck>()) }
-        val rootMidi = remember(root) { comfortableMidi(root.pitchClass) }
+        var current by remember(settings.keyChoice, settings.keyOrder) {
+            mutableStateOf(KeyQuiz.next(settings.keyChoice, settings.keyOrder, Random))
+        }
+        val drill = remember(current) { ScaleDrill(current) }
+        var slots by remember(current) { mutableStateOf(emptyList<Slot>()) }
+        var countedSlot by remember(current) { mutableIntStateOf(-1) }
+        var firstVerdict by remember(current) { mutableStateOf<Verdict?>(null) }
+        var wrong by remember(current) { mutableStateOf<StepCheck?>(null) }
+        var message by remember(current) { mutableStateOf<Pair<String, Verdict?>?>(null) }
+        var unreadable by remember(current) { mutableStateOf(false) }
+        var explaining by remember(current) { mutableStateOf(false) }
+        val rootMidi = remember(current) { comfortableMidi(current.root.pitchClass) }
+        val index = slots.size
+        val complete = index == drill.targets.size
 
-        Text(
-            "${root.name(notation)}-Dur",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
-        ScaleSlots(root, checks, notation)
-        val last = checks.lastOrNull()
-        FeedbackLine(
-            text = last?.let { feedbackText(it, notation) },
-            verdict = last?.let { if (it.correct) Verdict.CORRECT else Verdict.WRONG },
-        )
+        /** Only the first attempt per slot counts. */
+        fun countFirst(verdict: Verdict) {
+            if (countedSlot != index) {
+                onResult(verdict.isHit)
+                countedSlot = index
+                firstVerdict = verdict
+            }
+        }
 
-        if (checks.size < drill.targets.size) {
+        fun fill() {
+            slots = slots + Slot(drill.targets[index], firstVerdict ?: Verdict.WRONG)
+            sound.play(rootMidi + current.type.offsets[index + 1])
+            wrong = null
+            unreadable = false
+            firstVerdict = null
+        }
+
+        Text(current.name(notation), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(vertical = 4.dp))
+        ScaleSlots(current.root, slots, drill, notation)
+        FeedbackLine(message?.first, message?.second)
+
+        if (!complete) {
+            if (wrong != null || unreadable) {
+                MistakeActions(
+                    onSolution = {
+                        countFirst(Verdict.WRONG)
+                        message = "Lösung: ${drill.targets[index].name(notation)}" to null
+                        fill()
+                    },
+                    onExplain = {
+                        countFirst(Verdict.WRONG)
+                        explaining = true
+                    },
+                )
+            }
             Spacer(Modifier.weight(1f))
             NoteInput(
                 notation = notation,
-                defaultMode = settings.inputMode,
+                mode = settings.inputMode,
+                onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
                 state = InputState.ACCEPTING,
-                onNote = { pitch ->
-                    val check = drill.check(checks.size, pitch)
-                    checks = checks + check
-                    sound.play(rootMidi + MajorScale.OFFSETS[check.toDegree - 1])
-                    onResult(check.correct)
+                onNote = { entered ->
+                    val check = drill.check(index, entered.pitch)
+                    val judgement = Answer.judge(entered, check.expected.pitchClass, notation, check.expected)
+                    val verdict = Verdict.of(judgement.result) ?: return@NoteInput
+                    countFirst(verdict)
+                    if (verdict.isHit) {
+                        message = (
+                            if (verdict == Verdict.CORRECT) "Richtig: ${check.expected.name(notation)}"
+                            else "Richtig (in ${current.name(notation)}: ${judgement.usualName})"
+                            ) to verdict
+                        fill()
+                    } else {
+                        wrong = check
+                        message = stepFeedback(check) to Verdict.WRONG
+                    }
                 },
                 onContinue = {},
+                onUnreadable = { unreadable = true },
             )
         } else {
             ScaleResult(
                 settings = settings,
                 drill = drill,
-                correctCount = checks.count { it.correct },
+                hits = slots.count { it.verdict.isHit },
                 sound = sound,
-                onNext = { root = MajorScale.ROOTS.filter { it != root }.random() },
+                onNext = { current = KeyQuiz.next(settings.keyChoice, settings.keyOrder, Random, current) },
             )
+        }
+
+        if (explaining) {
+            val check = wrong ?: drill.check(index, drill.targets[index].pitchClass)
+            ScaleExplanation(current, check, given = wrong?.given, unreadable, notation) { explaining = false }
         }
     }
 }
 
-private fun feedbackText(check: StepCheck, notation: Notation): String {
-    val expected = check.expected.name(notation)
-    if (check.correct) return "Richtig: $expected"
-    return "${check.fromDegree}→${check.toDegree} ist ein ${check.expectedStep.label}, " +
-        "nicht ${Intervals.describe(check.givenSemitones)}. Richtig: $expected"
-}
+private fun stepFeedback(check: StepCheck): String =
+    "${check.fromDegree}→${check.toDegree} ist ein ${check.expectedStep.label}, " +
+        "nicht ${Intervals.describe(check.givenSemitones)} – nochmal?"
 
 /** Keeps played notes roughly between G3 and F#4. */
 private fun comfortableMidi(pitch: PitchClass): Int = 60 + pitch.semitone - if (pitch.semitone > 6) 12 else 0
 
-/** Given root plus 7 slots for degrees 2..8, each labelled with the step that leads into it once answered. */
+private fun ScaleType.pattern(): String = steps.joinToString(" ") { if (it == Step.WHOLE) "G" else "H" }
+
+/** Flat keys get flat names in the explanation strip, sharp keys sharp names. */
+private fun spellingOf(notes: List<SpelledNote>) = if (notes.any { it.alteration < 0 }) Spelling.FLAT else Spelling.SHARP
+
 @Composable
-private fun ScaleSlots(root: SpelledNote, checks: List<StepCheck>, notation: Notation) {
+private fun ScaleExplanation(
+    key: Key,
+    check: StepCheck,
+    given: PitchClass?,
+    unreadable: Boolean,
+    notation: Notation,
+    onDismiss: () -> Unit,
+) {
+    val first = check.from.pitchClass
+    val step = check.expectedStep.semitones
+    ExplanationDialog("${key.name(notation)}: Stufe ${check.fromDegree}→${check.toDegree}", onDismiss) {
+        SemitoneStrip(
+            first = first,
+            notation = notation,
+            spelling = spellingOf(key.scale),
+            arrows = listOf(StripArrow(0, step, jumpLabel(step))),
+            marks = buildMap {
+                if (given != null) put(stripIndex(first, given), MarkStyle.WRONG)
+                put(0, MarkStyle.ROOT)
+                put(step, MarkStyle.CORRECT)
+            },
+            names = mapOf(0 to check.from.name(notation), step to check.expected.name(notation)),
+        )
+        Text(
+            "${if (key.type == ScaleType.MAJOR) "Dur" else "Moll"}: ${key.type.pattern()} (G = Ganzton, H = Halbton). " +
+                "Schritt ${check.fromDegree}→${check.toDegree} ist ein ${check.expectedStep.label}: " +
+                "${check.from.name(notation)} → ${check.expected.name(notation)}.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (unreadable) UnreadableAnswerLine()
+    }
+}
+
+/** Given root plus 7 slots for degrees 2..8, each labelled with the step that leads into it once filled. */
+@Composable
+private fun ScaleSlots(root: SpelledNote, slots: List<Slot>, drill: ScaleDrill, notation: Notation) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        for (slot in 0..7) {
-            val check = if (slot == 0) null else checks.getOrNull(slot - 1)
-            val verdict = check?.let { if (it.correct) Verdict.CORRECT else Verdict.WRONG }
-            val isCurrent = slot == checks.size + 1
+        for (i in 0..7) {
+            val slot = if (i == 0) null else slots.getOrNull(i - 1)
+            val isCurrent = i == slots.size + 1
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (slot == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    color = if (i == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                     border = if (isCurrent) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             when {
-                                slot == 0 -> root.name(notation)
-                                check != null -> check.expected.name(notation)
+                                i == 0 -> root.name(notation)
+                                slot != null -> slot.note.name(notation)
                                 else -> ""
                             },
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (verdict != null) verdictColor(verdict) else MaterialTheme.colorScheme.onSurface,
+                            color = if (slot != null) verdictColor(slot.verdict) else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                         )
                     }
                 }
                 Text(
-                    check?.let { if (it.expectedStep == Step.WHOLE) "GT" else "HT" } ?: "",
+                    if (slot != null) (if (drill.key.type.steps[i - 1] == Step.WHOLE) "GT" else "HT") else "",
                     style = MaterialTheme.typography.labelMedium,
-                    color = verdictColor(verdict),
+                    color = verdictColor(slot?.verdict),
                 )
             }
         }
@@ -145,24 +243,25 @@ private fun ScaleSlots(root: SpelledNote, checks: List<StepCheck>, notation: Not
 private fun ColumnScope.ScaleResult(
     settings: Settings,
     drill: ScaleDrill,
-    correctCount: Int,
+    hits: Int,
     sound: Sound,
     onNext: () -> Unit,
 ) {
     val notation = settings.notation
+    val key = drill.key
     var string by remember(drill) {
-        mutableIntStateOf(Guitar.lowestRootString(drill.root.pitchClass, settings.stringSet.strings))
+        mutableIntStateOf(Guitar.lowestRootString(key.root.pitchClass, settings.stringSet.strings))
     }
-    val positions = Guitar.majorScaleOnString(drill.root.pitchClass, string)
+    val positions = Guitar.scaleOnString(key.root.pitchClass, string, key.type)
     val names = drill.scale + drill.root
     // Just root to octave; keep the nut in view when the root sits on fret 0 or 1.
     val firstFret = positions.first().fret.let { if (it <= 1) 0 else it }
     val lastFret = positions.last().fret
 
     Text(
-        "$correctCount von ${drill.targets.size} richtig",
+        "$hits von ${drill.targets.size} beim ersten Versuch richtig",
         style = MaterialTheme.typography.titleMedium,
-        color = verdictColor(if (correctCount == drill.targets.size) Verdict.CORRECT else null),
+        color = verdictColor(if (hits == drill.targets.size) Verdict.CORRECT else null),
     )
     Spacer(Modifier.height(8.dp))
     Segmented(Guitar.ALL_STRINGS, string, { Guitar.stringName(it, notation) }, { string = it })

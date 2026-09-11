@@ -28,11 +28,11 @@ import androidx.compose.ui.unit.dp
 import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
+import at.gigler.musictheorytrainer.theory.Answer
 import at.gigler.musictheorytrainer.theory.FretPosition
 import at.gigler.musictheorytrainer.theory.FretboardQuiz
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.NoteNames
-import at.gigler.musictheorytrainer.theory.PitchClass
 import at.gigler.musictheorytrainer.theory.Spelling
 import at.gigler.musictheorytrainer.theory.Tab
 import kotlinx.coroutines.delay
@@ -43,7 +43,7 @@ fun FretboardScreen(
     settings: Settings,
     sound: Sound,
     onResult: (Boolean) -> Unit,
-    onReverseChange: (Boolean) -> Unit,
+    updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
     ScreenScaffold(Exercise.FRETBOARD.title, onBack) {
@@ -51,7 +51,7 @@ fun FretboardScreen(
             listOf(false, true),
             settings.fretboardReverse,
             { if (it) "Stelle finden" else "Ton nennen" },
-            onReverseChange,
+            { reverse -> updateSettings { it.copy(fretboardReverse = reverse) } },
         )
         Spacer(Modifier.height(8.dp))
         val strings = settings.stringSet.strings
@@ -59,7 +59,7 @@ fun FretboardScreen(
             if (settings.fretboardReverse) {
                 FindPositionDrill(settings, strings, sound, onResult)
             } else {
-                NameNoteDrill(settings, strings, sound, onResult)
+                NameNoteDrill(settings, strings, sound, onResult, updateSettings)
             }
         }
     }
@@ -73,33 +73,20 @@ private fun ColumnScope.NameNoteDrill(
     strings: List<Int>,
     sound: Sound,
     onResult: (Boolean) -> Unit,
+    updateSettings: ((Settings) -> Settings) -> Unit,
 ) {
     val notation = settings.notation
     var position by remember { mutableStateOf(FretboardQuiz.randomPosition(strings, Random)) }
-    var given by remember { mutableStateOf<PitchClass?>(null) }
     val answer = Guitar.pitchAt(position)
-    val verdict = given?.let { if (it == answer) Verdict.CORRECT else Verdict.WRONG }
-
-    fun next() {
+    val state = rememberSingleAnswer(position) {
         position = FretboardQuiz.randomPosition(strings, Random, position)
-        given = null
     }
-
-    LaunchedEffect(position, verdict) {
-        if (verdict == Verdict.CORRECT) {
-            delay(AUTO_ADVANCE_MILLIS)
-            next()
-        }
-    }
+    val solved = state.revealed || state.verdict?.isHit == true
 
     val mark = FretMark(
         position,
-        label = if (verdict == null) "?" else NoteNames.name(answer, notation, Spelling.SHARP),
-        style = when (verdict) {
-            null -> MarkStyle.NORMAL
-            Verdict.CORRECT -> MarkStyle.CORRECT
-            Verdict.WRONG -> MarkStyle.WRONG
-        },
+        label = if (solved) NoteNames.name(answer, notation, Spelling.SHARP) else "?",
+        style = if (state.revealed) MarkStyle.HINT else state.verdict.markStyle(),
     )
     Fretboard(listOf(mark), notation, Modifier.weight(1f).fillMaxWidth(), activeStrings = strings)
     // With the soft keyboard open there is no room to spare.
@@ -107,28 +94,56 @@ private fun ColumnScope.NameNoteDrill(
         TabText(Tab.renderSequence(listOf(position), notation))
     }
     FeedbackLine(
-        text = when (verdict) {
-            null -> null
-            Verdict.CORRECT -> "Richtig: ${NoteNames.bothNames(answer, notation)}"
-            Verdict.WRONG -> "Falsch: ${NoteNames.bothNames(answer, notation)}, nicht ${NoteNames.bothNames(given!!, notation)}"
-        },
-        verdict = verdict,
+        state.feedback(NoteNames.bothNames(answer, notation)) { given -> given.spelled?.name(notation) ?: NoteNames.bothNames(given.pitch, notation) },
+        state.feedbackVerdict,
     )
+    if (state.showMistakeActions || state.revealed) {
+        MistakeActions(
+            onSolution = if (state.revealed) null else ({
+                state.reveal(onResult)
+                sound.play(Guitar.midiAt(position))
+            }),
+            onExplain = { state.explain(onResult) },
+        )
+    }
     NoteInput(
         notation = notation,
-        defaultMode = settings.inputMode,
-        state = when (verdict) {
-            null -> InputState.ACCEPTING
-            Verdict.CORRECT -> InputState.LOCKED
-            Verdict.WRONG -> InputState.CONTINUE
+        mode = settings.inputMode,
+        onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
+        state = state.inputState,
+        onNote = { entered ->
+            val judgement = Answer.judge(entered, answer, notation)
+            state.answer(entered, judgement, onResult)
+            if (judgement.result.isHit) sound.play(Guitar.midiAt(position))
         },
-        onNote = { pitch ->
-            given = pitch
-            sound.play(Guitar.midiAt(position))
-            onResult(pitch == answer)
-        },
-        onContinue = ::next,
+        onContinue = { position = FretboardQuiz.randomPosition(strings, Random, position) },
+        allowGuitar = false,
+        onUnreadable = state::markUnreadable,
     )
+
+    if (state.explaining) {
+        val open = Guitar.OPEN_STRINGS[position.string]
+        val given = state.given?.pitch?.takeIf { state.verdict == Verdict.WRONG }
+        ExplanationDialog("${Guitar.stringName(position.string, notation)}-Saite, Bund ${position.fret}", onDismiss = { state.explaining = false }) {
+            SemitoneStrip(
+                first = open,
+                notation = notation,
+                spelling = Spelling.SHARP,
+                arrows = if (position.fret == 0) emptyList() else listOf(StripArrow(0, position.fret, "+${position.fret} Bünde")),
+                marks = buildMap {
+                    if (given != null) put(stripIndex(open, given), MarkStyle.WRONG)
+                    put(0, MarkStyle.ROOT)
+                    put(position.fret, MarkStyle.CORRECT)
+                },
+            )
+            Text(
+                "Leere Saite ${NoteNames.name(open, notation, Spelling.SHARP)}, jeder Bund einen Halbton höher: " +
+                    "${position.fret} Bünde = ${NoteNames.bothNames(answer, notation)}.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (state.unreadable) UnreadableAnswerLine()
+        }
+    }
 }
 
 /** A note is named, the user taps every place it occurs on the active strings. */

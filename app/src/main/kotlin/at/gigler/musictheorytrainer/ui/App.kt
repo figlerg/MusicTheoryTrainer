@@ -23,7 +23,8 @@ import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
 import kotlinx.coroutines.launch
 
-private enum class Screen { HOME, FRETBOARD, INTERVALS, SCALE, SETTINGS }
+/** null is the home screen, [SETTINGS_SCREEN] the settings, anything else an exercise. */
+private const val SETTINGS_SCREEN = "SETTINGS"
 
 @Composable
 fun App(store: AppStore) {
@@ -32,48 +33,34 @@ fun App(store: AppStore) {
     val player = remember { TonePlayer() }
     DisposableEffect(player) { onDispose { player.release() } }
     val scope = rememberCoroutineScope()
-    var screen by rememberSaveable { mutableStateOf(Screen.HOME) }
+    var screen by rememberSaveable { mutableStateOf<String?>(null) }
 
-    BackHandler(enabled = screen != Screen.HOME) { screen = Screen.HOME }
+    BackHandler(enabled = screen != null) { screen = null }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         // DataStore answers within milliseconds; showing nothing until then avoids flashing defaults.
         val current = settings ?: return@Surface
         val sound = remember(current.sound) { Sound(player, current.sound) }
-        val home = { screen = Screen.HOME }
+        val home = { screen = null }
         fun record(exercise: Exercise): (Boolean) -> Unit = { correct -> scope.launch { store.record(exercise, correct) } }
-        fun update(transform: (Settings) -> Settings) {
-            scope.launch { store.updateSettings(transform) }
-        }
+        val update: ((Settings) -> Settings) -> Unit = { transform -> scope.launch { store.updateSettings(transform) } }
 
         Box(Modifier.safeDrawingPadding()) {
-            when (screen) {
-                Screen.HOME -> HomeScreen(
-                    scores = scores,
-                    onOpen = {
-                        screen = when (it) {
-                            Exercise.FRETBOARD -> Screen.FRETBOARD
-                            Exercise.INTERVALS -> Screen.INTERVALS
-                            Exercise.SCALE -> Screen.SCALE
-                        }
-                    },
-                    onSettings = { screen = Screen.SETTINGS },
-                )
-                Screen.FRETBOARD -> FretboardScreen(
+            when (val s = screen) {
+                null -> HomeScreen(scores = scores, onOpen = { screen = it.name }, onSettings = { screen = SETTINGS_SCREEN })
+                SETTINGS_SCREEN -> SettingsScreen(
                     settings = current,
-                    sound = sound,
-                    onResult = record(Exercise.FRETBOARD),
-                    onReverseChange = { reverse -> update { it.copy(fretboardReverse = reverse) } },
-                    onBack = home,
-                )
-                Screen.INTERVALS -> IntervalScreen(current, sound, record(Exercise.INTERVALS), home)
-                Screen.SCALE -> ScaleScreen(current, sound, record(Exercise.SCALE), home)
-                Screen.SETTINGS -> SettingsScreen(
-                    settings = current,
-                    onChange = ::update,
+                    onChange = update,
                     onResetScores = { scope.launch { store.resetScores() } },
                     onBack = home,
                 )
+                else -> when (val exercise = Exercise.valueOf(s)) {
+                    Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, home)
+                    Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, home)
+                    Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, home)
+                    Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, home)
+                    Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, home)
+                }
             }
         }
     }

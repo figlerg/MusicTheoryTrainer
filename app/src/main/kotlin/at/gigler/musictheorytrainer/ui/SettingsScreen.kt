@@ -12,6 +12,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -28,9 +29,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import at.gigler.musictheorytrainer.data.InputMode
 import at.gigler.musictheorytrainer.data.Settings
+import at.gigler.musictheorytrainer.data.SheetSource
 import at.gigler.musictheorytrainer.data.StringSet
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
+import at.gigler.musictheorytrainer.theory.KeyChoice
+import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.StaffRange
 
 @Composable
 fun SettingsScreen(
@@ -51,15 +56,25 @@ fun SettingsScreen(
                     { value -> onChange { it.copy(notation = value) } },
                 )
             }
-            Section("Standard-Eingabe") {
+            Section("Eingabe") {
                 Segmented(
                     InputMode.entries,
                     settings.inputMode,
-                    { if (it == InputMode.TEXT) "Text" else "Tasten" },
+                    {
+                        when (it) {
+                            InputMode.TEXT -> "Text"
+                            InputMode.KEYS -> "Tasten"
+                            InputMode.GUITAR -> "Gitarre"
+                        }
+                    },
                     { value -> onChange { it.copy(inputMode = value) } },
                 )
             }
-            Section("Griffbrett-Saiten") {
+            SwitchRow("Tab-Ansicht", settings.showTab) { value -> onChange { it.copy(showTab = value) } }
+            SwitchRow("Ton abspielen", settings.sound) { value -> onChange { it.copy(sound = value) } }
+
+            Group("Griffbrett-Töne")
+            Section("Saiten") {
                 Segmented(
                     StringSet.entries,
                     settings.stringSet,
@@ -67,7 +82,9 @@ fun SettingsScreen(
                     { value -> onChange { it.copy(stringSet = value) } },
                 )
             }
-            Section("Intervall-Schwierigkeit") {
+
+            Group("Intervalle")
+            Section("Schwierigkeit") {
                 Segmented(
                     IntervalDifficulty.entries,
                     settings.intervalDifficulty,
@@ -81,8 +98,44 @@ fun SettingsScreen(
                     { value -> onChange { it.copy(intervalDifficulty = value) } },
                 )
             }
-            SwitchRow("Tab-Ansicht", settings.showTab) { value -> onChange { it.copy(showTab = value) } }
-            SwitchRow("Ton abspielen", settings.sound) { value -> onChange { it.copy(sound = value) } }
+
+            Group("Tonleitern und Akkorde")
+            Section("Tonarten") {
+                Segmented(
+                    KeyChoice.entries,
+                    settings.keyChoice,
+                    {
+                        when (it) {
+                            KeyChoice.MAJOR -> "Dur"
+                            KeyChoice.MINOR -> "Moll"
+                            KeyChoice.BOTH -> "Beide"
+                        }
+                    },
+                    { value -> onChange { it.copy(keyChoice = value) } },
+                )
+            }
+            Section("Reihenfolge") {
+                Segmented(
+                    KeyOrder.entries,
+                    settings.keyOrder,
+                    { if (it == KeyOrder.CIRCLE_OF_FIFTHS) "Quintenzirkel" else "Zufall" },
+                    { value -> onChange { it.copy(keyOrder = value) } },
+                )
+            }
+            SwitchRow("Akkorde: Grundton vorgegeben", settings.chordRootGiven) { value -> onChange { it.copy(chordRootGiven = value) } }
+            SwitchRow("Griffe: Grundton muss tiefster Ton sein", settings.gripRootInBass) { value -> onChange { it.copy(gripRootInBass = value) } }
+
+            Group("Notenlesen")
+            Section("Tonumfang (Zufall)") {
+                Segmented(
+                    StaffRange.entries,
+                    settings.sheetRange,
+                    { if (it == StaffRange.IN_STAFF) "Im System" else "Mit Hilfslinien" },
+                    { value -> onChange { it.copy(sheetRange = value) } },
+                )
+            }
+            SwitchRow("Gitarre: exakte Oktave", settings.sheetExactOctave) { value -> onChange { it.copy(sheetExactOctave = value) } }
+
             Spacer(Modifier.height(24.dp))
             OutlinedButton(
                 onClick = { confirmReset = true },
@@ -111,12 +164,22 @@ fun SettingsScreen(
 }
 
 @Composable
+private fun Group(title: String) {
+    HorizontalDivider(Modifier.padding(top = 24.dp))
+    Text(
+        title,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 12.dp),
+    )
+}
+
+@Composable
 private fun Section(title: String, content: @Composable () -> Unit) {
     Text(
         title,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
     )
     content()
 }
@@ -127,7 +190,7 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
         Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .padding(top = 12.dp)
+            .padding(top = 8.dp)
             .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         verticalAlignment = Alignment.CenterVertically,
     ) {

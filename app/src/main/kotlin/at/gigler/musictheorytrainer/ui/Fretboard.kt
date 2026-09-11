@@ -28,7 +28,7 @@ import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.Notation
 import kotlin.math.min
 
-enum class MarkStyle { NORMAL, ROOT, CORRECT, WRONG, HINT }
+enum class MarkStyle { NORMAL, ROOT, CORRECT, UNUSUAL, WRONG, HINT }
 
 data class FretMark(val position: FretPosition, val label: String, val style: MarkStyle = MarkStyle.NORMAL)
 
@@ -54,6 +54,7 @@ fun Fretboard(
     firstFret: Int = 0,
     lastFret: Int = Guitar.MAX_FRET,
     activeStrings: Collection<Int> = Guitar.ALL_STRINGS,
+    mutedStrings: Set<Int> = emptySet(),
     onTap: ((FretPosition) -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -127,12 +128,23 @@ fun Fretboard(
         }
 
         val radius = min(g.columnWidth, g.rowHeight) * 0.42f
+        if (firstFret == 0) {
+            for (string in mutedStrings) {
+                drawCentered(
+                    measurer,
+                    "×",
+                    Offset(g.stringX(string), g.rowCenter(0)),
+                    TextStyle(color = colors.error, fontSize = (radius * 1.3f).toSp(), fontWeight = FontWeight.Bold),
+                )
+            }
+        }
         for (mark in marks) {
             if (mark.position.fret !in firstFret..lastFret) continue
             val (fill, content) = when (mark.style) {
                 MarkStyle.NORMAL -> colors.primary to colors.onPrimary
                 MarkStyle.ROOT -> colors.tertiary to colors.onTertiary
                 MarkStyle.CORRECT -> feedback.correct to feedback.onCorrect
+                MarkStyle.UNUSUAL -> feedback.unusual to feedback.onUnusual
                 MarkStyle.WRONG -> colors.error to colors.onError
                 MarkStyle.HINT -> colors.secondaryContainer to colors.onSecondaryContainer
             }
@@ -152,7 +164,7 @@ fun Fretboard(
     }
 }
 
-private fun DrawScope.drawCentered(measurer: TextMeasurer, text: String, center: Offset, style: TextStyle) {
+internal fun DrawScope.drawCentered(measurer: TextMeasurer, text: String, center: Offset, style: TextStyle) {
     val layout = measurer.measure(text, style)
     drawText(layout, topLeft = Offset(center.x - layout.size.width / 2f, center.y - layout.size.height / 2f))
 }

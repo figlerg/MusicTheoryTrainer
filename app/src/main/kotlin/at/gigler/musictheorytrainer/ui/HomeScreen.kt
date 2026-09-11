@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,16 +24,16 @@ import at.gigler.musictheorytrainer.data.Score
 @Composable
 fun HomeScreen(scores: Map<Exercise, Score>, onOpen: (Exercise) -> Unit, onSettings: () -> Unit) {
     ScreenScaffold(title = "Musiktheorie", onBack = null) {
-        Spacer(Modifier.height(8.dp))
-        for (exercise in Exercise.entries) {
-            ExerciseCard(exercise.title, scores[exercise] ?: Score(), onClick = { onOpen(exercise) })
-            Spacer(Modifier.height(12.dp))
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Spacer(Modifier.height(4.dp))
+            for (exercise in Exercise.entries) {
+                ExerciseCard(exercise.title, scores[exercise] ?: Score(), onClick = { onOpen(exercise) })
+                Spacer(Modifier.height(10.dp))
+            }
         }
-        Spacer(Modifier.weight(1f))
-        OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+        OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(56.dp)) {
             Text("Einstellungen")
         }
-        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -39,7 +41,7 @@ fun HomeScreen(scores: Map<Exercise, Score>, onOpen: (Exercise) -> Unit, onSetti
 private fun ExerciseCard(title: String, score: Score, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(horizontal = 20.dp, vertical = 16.dp),
+            Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -52,7 +54,7 @@ private fun ExerciseCard(title: String, score: Score, onClick: () -> Unit) {
             }
             Text(
                 score.percent?.let { "$it %" } ?: "–",
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Medium,
             )
         }

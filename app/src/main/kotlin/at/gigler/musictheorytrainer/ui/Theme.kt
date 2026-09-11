@@ -14,12 +14,22 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-/** Material has no "success" color, so correct answers get their own green. */
+/** Material has no "success" or "warning" color: green for correct, amber for half right. */
 @Immutable
-data class FeedbackColors(val correct: Color, val onCorrect: Color)
+data class FeedbackColors(val correct: Color, val onCorrect: Color, val unusual: Color, val onUnusual: Color)
 
-private val LightFeedback = FeedbackColors(correct = Color(0xFF2E7D32), onCorrect = Color.White)
-private val DarkFeedback = FeedbackColors(correct = Color(0xFF81C784), onCorrect = Color(0xFF0B2E0F))
+private val LightFeedback = FeedbackColors(
+    correct = Color(0xFF2E7D32),
+    onCorrect = Color.White,
+    unusual = Color(0xFFB26A00),
+    onUnusual = Color.White,
+)
+private val DarkFeedback = FeedbackColors(
+    correct = Color(0xFF81C784),
+    onCorrect = Color(0xFF0B2E0F),
+    unusual = Color(0xFFFFCA28),
+    onUnusual = Color(0xFF3A2A00),
+)
 
 val LocalFeedbackColors = staticCompositionLocalOf { LightFeedback }
 

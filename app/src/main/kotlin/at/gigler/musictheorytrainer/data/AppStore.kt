@@ -9,18 +9,23 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
+import at.gigler.musictheorytrainer.theory.KeyChoice
+import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.StaffRange
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-enum class InputMode { TEXT, KEYS }
+enum class InputMode { TEXT, KEYS, GUITAR }
 
 enum class StringSet(val strings: List<Int>) {
     LOW_E_AND_A(listOf(0, 1)),
     ALL(Guitar.ALL_STRINGS),
 }
 
-enum class Exercise { FRETBOARD, INTERVALS, SCALE }
+enum class SheetSource { MELODIES, RANDOM }
+
+enum class Exercise { FRETBOARD, INTERVALS, SCALE, CHORDS, SHEET }
 
 data class Settings(
     val notation: Notation = Notation.GERMAN,
@@ -30,6 +35,14 @@ data class Settings(
     val fretboardReverse: Boolean = false,
     val showTab: Boolean = true,
     val sound: Boolean = true,
+    val keyChoice: KeyChoice = KeyChoice.MAJOR,
+    val keyOrder: KeyOrder = KeyOrder.RANDOM,
+    val chordRootGiven: Boolean = false,
+    val chordGrip: Boolean = false,
+    val gripRootInBass: Boolean = true,
+    val sheetSource: SheetSource = SheetSource.MELODIES,
+    val sheetRange: StaffRange = StaffRange.IN_STAFF,
+    val sheetExactOctave: Boolean = false,
 )
 
 data class Score(val correct: Int = 0, val total: Int = 0) {
@@ -58,6 +71,14 @@ class AppStore(context: Context) {
             prefs[FRETBOARD_REVERSE] = s.fretboardReverse
             prefs[SHOW_TAB] = s.showTab
             prefs[SOUND] = s.sound
+            prefs[KEY_CHOICE] = s.keyChoice.name
+            prefs[KEY_ORDER] = s.keyOrder.name
+            prefs[CHORD_ROOT_GIVEN] = s.chordRootGiven
+            prefs[CHORD_GRIP] = s.chordGrip
+            prefs[GRIP_ROOT_IN_BASS] = s.gripRootInBass
+            prefs[SHEET_SOURCE] = s.sheetSource.name
+            prefs[SHEET_RANGE] = s.sheetRange.name
+            prefs[SHEET_EXACT_OCTAVE] = s.sheetExactOctave
         }
     }
 
@@ -78,15 +99,23 @@ class AppStore(context: Context) {
     }
 
     private fun Preferences.toSettings(): Settings {
-        val defaults = Settings()
+        val d = Settings()
         return Settings(
-            notation = enumOr(this[NOTATION], defaults.notation),
-            inputMode = enumOr(this[INPUT_MODE], defaults.inputMode),
-            stringSet = enumOr(this[STRING_SET], defaults.stringSet),
-            intervalDifficulty = enumOr(this[INTERVAL_DIFFICULTY], defaults.intervalDifficulty),
-            fretboardReverse = this[FRETBOARD_REVERSE] ?: defaults.fretboardReverse,
-            showTab = this[SHOW_TAB] ?: defaults.showTab,
-            sound = this[SOUND] ?: defaults.sound,
+            notation = enumOr(this[NOTATION], d.notation),
+            inputMode = enumOr(this[INPUT_MODE], d.inputMode),
+            stringSet = enumOr(this[STRING_SET], d.stringSet),
+            intervalDifficulty = enumOr(this[INTERVAL_DIFFICULTY], d.intervalDifficulty),
+            fretboardReverse = this[FRETBOARD_REVERSE] ?: d.fretboardReverse,
+            showTab = this[SHOW_TAB] ?: d.showTab,
+            sound = this[SOUND] ?: d.sound,
+            keyChoice = enumOr(this[KEY_CHOICE], d.keyChoice),
+            keyOrder = enumOr(this[KEY_ORDER], d.keyOrder),
+            chordRootGiven = this[CHORD_ROOT_GIVEN] ?: d.chordRootGiven,
+            chordGrip = this[CHORD_GRIP] ?: d.chordGrip,
+            gripRootInBass = this[GRIP_ROOT_IN_BASS] ?: d.gripRootInBass,
+            sheetSource = enumOr(this[SHEET_SOURCE], d.sheetSource),
+            sheetRange = enumOr(this[SHEET_RANGE], d.sheetRange),
+            sheetExactOctave = this[SHEET_EXACT_OCTAVE] ?: d.sheetExactOctave,
         )
     }
 
@@ -98,6 +127,14 @@ class AppStore(context: Context) {
         val FRETBOARD_REVERSE = booleanPreferencesKey("fretboard_reverse")
         val SHOW_TAB = booleanPreferencesKey("show_tab")
         val SOUND = booleanPreferencesKey("sound")
+        val KEY_CHOICE = stringPreferencesKey("key_choice")
+        val KEY_ORDER = stringPreferencesKey("key_order")
+        val CHORD_ROOT_GIVEN = booleanPreferencesKey("chord_root_given")
+        val CHORD_GRIP = booleanPreferencesKey("chord_grip")
+        val GRIP_ROOT_IN_BASS = booleanPreferencesKey("grip_root_in_bass")
+        val SHEET_SOURCE = stringPreferencesKey("sheet_source")
+        val SHEET_RANGE = stringPreferencesKey("sheet_range")
+        val SHEET_EXACT_OCTAVE = booleanPreferencesKey("sheet_exact_octave")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")
