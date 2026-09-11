@@ -35,19 +35,23 @@ data class FretMark(val position: FretPosition, val label: String, val style: Ma
 private val SINGLE_INLAYS = setOf(3, 5, 7, 9, 15, 17, 19, 21)
 private val DOUBLE_INLAYS = setOf(12, 24)
 
-/** Height the fretboard needs for [lastFret] with rows of [rowHeight], including header and nut. */
-fun fretboardHeight(lastFret: Int, rowHeight: Dp): Dp =
-    FretboardGeometry.HEADER + FretboardGeometry.NUT + rowHeight * (lastFret + 1)
+/** Height the fretboard needs for frets [firstFret]..[lastFret] with rows of [rowHeight], header included. */
+fun fretboardHeight(firstFret: Int, lastFret: Int, rowHeight: Dp): Dp =
+    FretboardGeometry.HEADER +
+        (if (firstFret == 0) FretboardGeometry.NUT else 0.dp) +
+        rowHeight * (lastFret - firstFret + 1)
 
 /**
  * Vertical fretboard like a chord chart: nut on top, low E on the left.
- * Fret 0 is the row above the nut, so open strings have a place for their dot.
+ * With [firstFret] 0, fret 0 is the row above the nut so open strings have a place for their dot;
+ * otherwise only the section [firstFret]..[lastFret] is drawn, without nut.
  */
 @Composable
 fun Fretboard(
     marks: List<FretMark>,
     notation: Notation,
     modifier: Modifier = Modifier,
+    firstFret: Int = 0,
     lastFret: Int = Guitar.MAX_FRET,
     activeStrings: Collection<Int> = Guitar.ALL_STRINGS,
     onTap: ((FretPosition) -> Unit)? = null,
@@ -62,22 +66,22 @@ fun Fretboard(
     val tapModifier = if (onTap == null) {
         Modifier
     } else {
-        Modifier.pointerInput(lastFret, active) {
+        Modifier.pointerInput(firstFret, lastFret, active) {
             detectTapGestures { offset ->
-                val position = FretboardGeometry(size.toSize(), lastFret, this).hit(offset)
+                val position = FretboardGeometry(size.toSize(), firstFret, lastFret, this).hit(offset)
                 if (position != null && position.string in active) currentOnTap?.invoke(position)
             }
         }
     }
 
     Canvas(modifier.then(tapModifier).semantics { contentDescription = "Griffbrett" }) {
-        val g = FretboardGeometry(size, lastFret, this)
+        val g = FretboardGeometry(size, firstFret, lastFret, this)
         val neckWidth = g.neckRight - g.neckLeft
 
-        drawRect(colors.surfaceContainerHigh, Offset(g.neckLeft, g.nutTop), Size(neckWidth, size.height - g.nutTop))
+        drawRect(colors.surfaceContainerHigh, Offset(g.neckLeft, g.neckTop), Size(neckWidth, size.height - g.neckTop))
 
         val inlayRadius = min(g.columnWidth, g.rowHeight) * 0.13f
-        for (fret in 1..lastFret) {
+        for (fret in maxOf(1, firstFret)..lastFret) {
             val y = g.rowCenter(fret)
             if (fret in SINGLE_INLAYS) {
                 drawCircle(colors.outlineVariant, inlayRadius, Offset(g.left + 3 * g.columnWidth, y))
@@ -95,14 +99,19 @@ fun Fretboard(
             )
         }
 
-        drawRect(colors.onSurface, Offset(g.neckLeft, g.nutTop), Size(neckWidth, g.nut))
+        if (firstFret == 0) {
+            drawRect(colors.onSurface, Offset(g.neckLeft, g.neckTop), Size(neckWidth, g.nut))
+        } else {
+            drawLine(colors.outline, Offset(g.neckLeft, g.neckTop), Offset(g.neckRight, g.neckTop), 1.5.dp.toPx())
+        }
 
+        val stringTop = if (firstFret == 0) g.top + g.rowHeight * 0.2f else g.top
         for (string in 0 until Guitar.STRING_COUNT) {
             val x = g.stringX(string)
             val isActive = string in active
             drawLine(
                 colors.onSurfaceVariant.copy(alpha = if (isActive) 1f else 0.25f),
-                Offset(x, g.top + g.rowHeight * 0.2f),
+                Offset(x, stringTop),
                 Offset(x, size.height),
                 (2.6f - string * 0.3f).dp.toPx(),
             )
@@ -119,7 +128,7 @@ fun Fretboard(
 
         val radius = min(g.columnWidth, g.rowHeight) * 0.42f
         for (mark in marks) {
-            if (mark.position.fret > lastFret) continue
+            if (mark.position.fret !in firstFret..lastFret) continue
             val (fill, content) = when (mark.style) {
                 MarkStyle.NORMAL -> colors.primary to colors.onPrimary
                 MarkStyle.ROOT -> colors.tertiary to colors.onTertiary
@@ -149,32 +158,39 @@ private fun DrawScope.drawCentered(measurer: TextMeasurer, text: String, center:
 }
 
 /** Shared by drawing and hit testing so taps land exactly where things are drawn. */
-private class FretboardGeometry(size: Size, lastFret: Int, density: Density) {
+private class FretboardGeometry(size: Size, private val firstFret: Int, private val lastFret: Int, density: Density) {
     val top = with(density) { HEADER.toPx() }
-    val nut = with(density) { NUT.toPx() }
+    val nut = if (firstFret == 0) with(density) { NUT.toPx() } else 0f
     val left = with(density) { 28.dp.toPx() }
     private val right = with(density) { 8.dp.toPx() }
-    private val lastFret = lastFret
 
     val columnWidth = (size.width - left - right) / Guitar.STRING_COUNT
-    val rowHeight = (size.height - top - nut) / (lastFret + 1)
+    val rowHeight = (size.height - top - nut) / (lastFret - firstFret + 1)
     val neckLeft = left + columnWidth * 0.1f
     val neckRight = size.width - right - columnWidth * 0.1f
 
-    /** Top of the nut, which sits between the open-string row and fret 1. */
-    val nutTop = top + rowHeight
+    /** Where the fretted part starts: the nut below the open-string row, or the top for a section. */
+    val neckTop = if (firstFret == 0) top + rowHeight else top
 
     fun stringX(string: Int) = left + (string + 0.5f) * columnWidth
 
-    fun rowTop(fret: Int) = if (fret == 0) top else top + nut + fret * rowHeight
+    fun rowTop(fret: Int) = when {
+        firstFret > 0 -> top + (fret - firstFret) * rowHeight
+        fret == 0 -> top
+        else -> top + nut + fret * rowHeight
+    }
 
     fun rowCenter(fret: Int) = rowTop(fret) + rowHeight / 2
 
     fun hit(offset: Offset): FretPosition? {
         if (offset.x < left || offset.y < top) return null
         val string = ((offset.x - left) / columnWidth).toInt()
-        val fret = if (offset.y < nutTop + nut) 0 else ((offset.y - top - nut) / rowHeight).toInt()
-        return if (string in 0 until Guitar.STRING_COUNT && fret in 0..lastFret) FretPosition(string, fret) else null
+        val fret = when {
+            firstFret > 0 -> firstFret + ((offset.y - top) / rowHeight).toInt()
+            offset.y < neckTop + nut -> 0
+            else -> ((offset.y - top - nut) / rowHeight).toInt()
+        }
+        return if (string in 0 until Guitar.STRING_COUNT && fret in firstFret..lastFret) FretPosition(string, fret) else null
     }
 
     companion object {

@@ -3,10 +3,12 @@ package at.gigler.musictheorytrainer.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,7 +44,7 @@ import at.gigler.musictheorytrainer.theory.Step
 import at.gigler.musictheorytrainer.theory.StepCheck
 import at.gigler.musictheorytrainer.theory.Tab
 
-private val RESULT_ROW_HEIGHT = 34.dp
+private val MIN_ROW_HEIGHT = 26.dp
 
 @Composable
 fun ScaleScreen(settings: Settings, sound: Sound, onResult: (Boolean) -> Unit, onBack: () -> Unit) {
@@ -153,7 +155,9 @@ private fun ColumnScope.ScaleResult(
     }
     val positions = Guitar.majorScaleOnString(drill.root.pitchClass, string)
     val names = drill.scale + drill.root
-    val lastFret = maxOf(Guitar.MAX_FRET, positions.last().fret)
+    // Just root to octave; keep the nut in view when the root sits on fret 0 or 1.
+    val firstFret = positions.first().fret.let { if (it <= 1) 0 else it }
+    val lastFret = positions.last().fret
 
     Text(
         "$correctCount von ${drill.targets.size} richtig",
@@ -162,21 +166,27 @@ private fun ColumnScope.ScaleResult(
     )
     Spacer(Modifier.height(8.dp))
     Segmented(Guitar.ALL_STRINGS, string, { Guitar.stringName(it, notation) }, { string = it })
-    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-        Fretboard(
-            marks = positions.mapIndexed { degree, position ->
-                FretMark(
-                    position,
-                    names[degree].name(notation),
-                    if (degree == 0 || degree == names.lastIndex) MarkStyle.ROOT else MarkStyle.NORMAL,
-                )
-            },
-            notation = notation,
-            modifier = Modifier.fillMaxWidth().height(fretboardHeight(lastFret, RESULT_ROW_HEIGHT)),
-            lastFret = lastFret,
-            activeStrings = listOf(string),
-        )
-        if (settings.showTab) TabText(Tab.renderSequence(positions, notation))
+    // The fretboard fills the visible area; the tab below it is reachable by scrolling.
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        val rows = lastFret - firstFret + 1
+        val rowHeight = ((maxHeight - fretboardHeight(firstFret, lastFret, 0.dp)) / rows).coerceAtLeast(MIN_ROW_HEIGHT)
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Fretboard(
+                marks = positions.mapIndexed { degree, position ->
+                    FretMark(
+                        position,
+                        names[degree].name(notation),
+                        if (degree == 0 || degree == names.lastIndex) MarkStyle.ROOT else MarkStyle.NORMAL,
+                    )
+                },
+                notation = notation,
+                modifier = Modifier.fillMaxWidth().height(fretboardHeight(firstFret, lastFret, rowHeight)),
+                firstFret = firstFret,
+                lastFret = lastFret,
+                activeStrings = listOf(string),
+            )
+            if (settings.showTab) TabText(Tab.renderSequence(positions, notation))
+        }
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (sound.enabled) {

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import at.gigler.musictheorytrainer.data.Exercise
 
 /** Correct answers move on by themselves after this delay, wrong ones wait for "Weiter". */
@@ -109,6 +110,7 @@ fun TabText(tab: String, modifier: Modifier = Modifier) {
     Text(
         tab,
         fontFamily = FontFamily.Monospace,
+        letterSpacing = 0.sp,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         softWrap = false,
