@@ -128,3 +128,7 @@ keyPassword=...
 ```
 
 Existiert die Datei, signiert `assembleRelease` automatisch damit.
+
+## Lizenz
+
+MIT, siehe [LICENSE](LICENSE).
