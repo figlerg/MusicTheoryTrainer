@@ -58,6 +58,18 @@ class StaffTest {
     }
 
     @Test
+    fun `melodies have a length per note and fill whole 4-4 bars`() {
+        for (melody in Melodies.ALL) {
+            assertEquals(melody.title, melody.notes.size, melody.beats.size)
+            assertEquals(melody.title, 0.0, melody.beats.sum() % 4, 1e-9)
+            assertTrue(melody.title, melody.beats.all { it > 0 })
+        }
+        val alle = Melodies.ALL.first()
+        assertEquals(listOf(1.0, 1.0, 1.0, 1.0, 2.0, 2.0), alle.beats.take(6))
+        assertEquals(60.0 / 112, alle.seconds.first(), 1e-9)
+    }
+
+    @Test
     fun `random lines stay in range and never repeat a note`() {
         val random = Random(11)
         for (range in StaffRange.entries) {

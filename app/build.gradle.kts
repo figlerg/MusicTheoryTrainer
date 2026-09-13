@@ -19,8 +19,8 @@ android {
         applicationId = "at.gigler.musictheorytrainer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.2.1"
     }
 
     signingConfigs {
@@ -65,4 +65,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.datastore.preferences)
+
+    testImplementation(libs.junit)
 }

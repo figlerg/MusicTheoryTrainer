@@ -16,9 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -289,12 +287,7 @@ private fun ColumnScope.ScaleResult(
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (sound.enabled) {
-            OutlinedButton(
-                onClick = { sound.playSequence(positions.map(Guitar::midiAt)) },
-                modifier = Modifier.height(56.dp),
-            ) {
-                Icon(PlayIcon, contentDescription = "Anhören")
-            }
+            PlayStopButton(sound) { sound.playSequence(positions.map(Guitar::midiAt)) }
         }
         Button(onClick = onNext, modifier = Modifier.weight(1f).height(56.dp)) { Text("Nächste Tonleiter") }
     }

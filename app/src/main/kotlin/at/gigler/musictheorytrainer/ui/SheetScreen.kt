@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,7 +45,13 @@ import at.gigler.musictheorytrainer.theory.StaffNote
 import at.gigler.musictheorytrainer.theory.StaffRange
 import kotlin.random.Random
 
-private data class SheetLine(val notes: List<StaffNote>, val melody: Melody?)
+private data class SheetLine(val notes: List<StaffNote>, val melody: Melody?) {
+    /** Guitar pitch and length in seconds: the melody's own rhythm, random lines in even quarters. */
+    fun timed(): List<Pair<Int, Double>> =
+        notes.mapIndexed { i, note -> note.guitarMidi to (melody?.seconds?.get(i) ?: RANDOM_NOTE_SECONDS) }
+}
+
+private const val RANDOM_NOTE_SECONDS = 0.6
 
 private fun newLine(source: SheetSource, range: StaffRange, previous: SheetLine?): SheetLine = when (source) {
     SheetSource.MELODIES -> SheetQuiz.nextMelody(Random, previous?.melody).let { SheetLine(it.notes, it) }
@@ -176,9 +180,7 @@ fun SheetScreen(
             )
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (sound.enabled) {
-                    OutlinedButton(onClick = { sound.playSequence(line.notes.map { it.guitarMidi }) }, modifier = Modifier.height(56.dp)) {
-                        Icon(PlayIcon, contentDescription = "Anhören")
-                    }
+                    PlayStopButton(sound) { sound.playTimed(line.timed()) }
                 }
                 Button(
                     onClick = { line = newLine(settings.sheetSource, settings.sheetRange, line) },

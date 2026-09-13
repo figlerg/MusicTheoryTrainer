@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,15 +27,15 @@ import kotlinx.coroutines.launch
 private const val SETTINGS_SCREEN = "SETTINGS"
 
 @Composable
-fun App(store: AppStore) {
+fun App(store: AppStore, player: TonePlayer) {
     val settings by store.settings.collectAsState(initial = null)
     val scores by store.scores.collectAsState(initial = emptyMap())
-    val player = remember { TonePlayer() }
-    DisposableEffect(player) { onDispose { player.release() } }
     val scope = rememberCoroutineScope()
     var screen by rememberSaveable { mutableStateOf<String?>(null) }
 
     BackHandler(enabled = screen != null) { screen = null }
+    // Leaving a screen ends whatever it was playing.
+    LaunchedEffect(screen) { player.stop() }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         // DataStore answers within milliseconds; showing nothing until then avoids flashing defaults.

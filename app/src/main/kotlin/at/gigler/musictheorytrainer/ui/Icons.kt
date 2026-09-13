@@ -25,6 +25,18 @@ val BackArrowIcon: ImageVector by lazy {
     }.build()
 }
 
+val StopIcon: ImageVector by lazy {
+    ImageVector.Builder("Stop", 24.dp, 24.dp, 24f, 24f).apply {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(6f, 6f)
+            horizontalLineToRelative(12f)
+            verticalLineToRelative(12f)
+            horizontalLineToRelative(-12f)
+            close()
+        }
+    }.build()
+}
+
 val PlayIcon: ImageVector by lazy {
     ImageVector.Builder("Play", 24.dp, 24.dp, 24f, 24f).apply {
         path(fill = SolidColor(Color.Black)) {

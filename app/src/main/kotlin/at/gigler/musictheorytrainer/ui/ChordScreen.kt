@@ -131,7 +131,7 @@ private fun ColumnScope.ToneDrill(
     LaunchedEffect(complete) {
         if (complete && !revealed) {
             record(mistakes == 0)
-            sound.playSequence(Grips.standard(chord).sounding.map(Guitar::midiAt))
+            sound.strum(Grips.standard(chord).sounding.map(Guitar::midiAt))
         }
     }
 
@@ -411,7 +411,7 @@ private fun ColumnScope.GripDrill(
                     record(result.isEmpty())
                     if (result.isEmpty()) {
                         solved = true
-                        sound.playSequence(grip.sounding.sortedBy(Guitar::midiAt).map(Guitar::midiAt))
+                        sound.strum(grip.sounding.map(Guitar::midiAt))
                     }
                 },
                 modifier = Modifier.weight(1f).height(56.dp),

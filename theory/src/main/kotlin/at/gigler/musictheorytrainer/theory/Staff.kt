@@ -49,30 +49,49 @@ enum class StaffRange(val low: Int, val high: Int) {
     GUITAR(-7, 10),
 }
 
-data class Melody(val title: String, val notes: List<StaffNote>)
+/** A melody with rhythm: [beats] are note lengths in quarter notes, played at [bpm]. */
+data class Melody(val title: String, val notes: List<StaffNote>, val beats: List<Double>, val bpm: Int) {
+
+    val seconds: List<Double> get() = beats.map { it * 60.0 / bpm }
+
+    companion object {
+        /** "G4 A4/2 E5/1.5": each note with its length in quarter notes, 1 if omitted. */
+        fun parse(title: String, bpm: Int, text: String): Melody {
+            val tokens = text.split(' ').filter { it.isNotBlank() }
+            return Melody(
+                title = title,
+                notes = StaffNote.parseAll(tokens.joinToString(" ") { it.substringBefore('/') }),
+                beats = tokens.map { it.substringAfter('/', "1").toDouble() },
+                bpm = bpm,
+            )
+        }
+    }
+}
 
 /** Public-domain melodies, all in G major using only G A H C D E so no key signature is needed. */
 object Melodies {
     val ALL: List<Melody> = listOf(
-        Melody(
-            "Alle meine Entchen",
-            StaffNote.parseAll("G4 A4 B4 C5 D5 D5 E5 E5 E5 E5 D5 E5 E5 E5 E5 D5 C5 C5 C5 C5 B4 B4 A4 A4 A4 A4 G4"),
+        Melody.parse(
+            "Alle meine Entchen", 112,
+            "G4 A4 B4 C5 D5/2 D5/2 E5 E5 E5 E5 D5/4 E5 E5 E5 E5 D5/4 C5 C5 C5 C5 B4/2 B4/2 A4 A4 A4 A4 G4/4",
         ),
-        Melody(
-            "Hänschen klein",
-            StaffNote.parseAll("D5 B4 B4 C5 A4 A4 G4 A4 B4 C5 D5 D5 D5 D5 B4 B4 C5 A4 A4 G4 B4 D5 D5 G4"),
+        Melody.parse(
+            "Hänschen klein", 112,
+            "D5 B4 B4/2 C5 A4 A4/2 G4 A4 B4 C5 D5 D5 D5/2 D5 B4 B4/2 C5 A4 A4/2 G4 B4 D5 D5 G4/4",
         ),
-        Melody(
-            "Bruder Jakob",
-            StaffNote.parseAll("G4 A4 B4 G4 G4 A4 B4 G4 B4 C5 D5 B4 C5 D5 D5 E5 D5 C5 B4 G4 D5 E5 D5 C5 B4 G4 G4 D4 G4 G4 D4 G4"),
+        Melody.parse(
+            "Bruder Jakob", 100,
+            "G4 A4 B4 G4 G4 A4 B4 G4 B4 C5 D5/2 B4 C5 D5/2 " +
+                "D5/0.5 E5/0.5 D5/0.5 C5/0.5 B4 G4 D5/0.5 E5/0.5 D5/0.5 C5/0.5 B4 G4 G4 D4 G4/2 G4 D4 G4/2",
         ),
-        Melody(
-            "Morgen kommt der Weihnachtsmann",
-            StaffNote.parseAll("G4 G4 D5 D5 E5 E5 D5 C5 C5 B4 B4 A4 A4 G4 D5 D5 C5 C5 B4 B4 A4 D5 D5 C5 C5 B4 B4 A4"),
+        Melody.parse(
+            "Morgen kommt der Weihnachtsmann", 100,
+            "G4 G4 D5 D5 E5 E5 D5/2 C5 C5 B4 B4 A4 A4 G4/2 D5 D5 C5 C5 B4 B4 A4/2 D5 D5 C5 C5 B4 B4 A4/2",
         ),
-        Melody(
-            "Freude schöner Götterfunken",
-            StaffNote.parseAll("B4 B4 C5 D5 D5 C5 B4 A4 G4 G4 A4 B4 B4 A4 A4 B4 B4 C5 D5 D5 C5 B4 A4 G4 G4 A4 B4 A4 G4 G4"),
+        Melody.parse(
+            "Freude schöner Götterfunken", 112,
+            "B4 B4 C5 D5 D5 C5 B4 A4 G4 G4 A4 B4 B4/1.5 A4/0.5 A4/2 " +
+                "B4 B4 C5 D5 D5 C5 B4 A4 G4 G4 A4 B4 A4/1.5 G4/0.5 G4/2",
         ),
     )
 }

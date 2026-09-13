@@ -24,6 +24,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.theory.AnswerResult
 
@@ -145,6 +148,15 @@ fun MistakeActions(onSolution: (() -> Unit)?, onExplain: () -> Unit, modifier: M
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
         if (onSolution != null) OutlinedButton(onClick = onSolution) { Text("Lösung") }
         OutlinedButton(onClick = onExplain) { Text("Erklärung") }
+    }
+}
+
+/** Plays with ▶ and turns into ■ while something is sounding. */
+@Composable
+fun PlayStopButton(sound: Sound, modifier: Modifier = Modifier, onPlay: () -> Unit) {
+    val playing by sound.playing.collectAsState()
+    OutlinedButton(onClick = { if (playing) sound.stop() else onPlay() }, modifier = modifier.height(56.dp)) {
+        Icon(if (playing) StopIcon else PlayIcon, contentDescription = if (playing) "Stopp" else "Anhören")
     }
 }
 
