@@ -188,6 +188,30 @@ object Options {
         set = { s, v -> s.copy(earReference = v) },
     )
 
+    val speedSeconds = choice(
+        "Rundenlänge",
+        values = listOf(30, 60, 120),
+        labels = listOf("30 s", "60 s", "2 min"),
+        get = { it.speedSeconds },
+        set = { s, v -> s.copy(speedSeconds = v) },
+    )
+
+    val metronome = Option.Switch(
+        "Metronom",
+        hint = "Tickt leise mit, damit du im Takt bleibst.",
+        checked = { it.metronome },
+        set = { s, v -> s.copy(metronome = v) },
+    )
+
+    val metronomeBpm = choice(
+        "Tempo",
+        hint = "Schläge pro Minute.",
+        values = listOf(50, 60, 80, 100),
+        labels = listOf("50", "60", "80", "100"),
+        get = { it.metronomeBpm },
+        set = { s, v -> s.copy(metronomeBpm = v) },
+    )
+
     /** Shown in every exercise, below its own options. */
     val general: List<Option> = listOf(notation, inputMode, sound, voice)
 
@@ -200,5 +224,7 @@ object Options {
         Exercise.EAR_INTERVAL -> listOf(earIntervalSet, earHarmonic)
         Exercise.EAR_QUALITY, Exercise.EAR_CHORD -> listOf(earHarmonic)
         Exercise.EAR_PITCH -> listOf(earReference, hideKeyLabels)
+        Exercise.SHEET_SPEED ->
+            listOf(speedSeconds, metronome, metronomeBpm, sheetRange, sheetExactOctave, hideStringNames, hideKeyLabels)
     }
 }

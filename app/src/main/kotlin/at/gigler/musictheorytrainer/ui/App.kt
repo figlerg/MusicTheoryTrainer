@@ -51,6 +51,7 @@ fun App(store: AppStore, player: TonePlayer) {
     val settings by store.settings.collectAsState(initial = null)
     val scores by store.scores.collectAsState(initial = emptyMap())
     val periodStart by store.periodStart.collectAsState(initial = 0L)
+    val speedBest by store.speedBest.collectAsState(initial = 0)
     val context = LocalContext.current
     val log = remember(context) { PracticeLog(File(context.filesDir, "practice-log.tsv")) }
     val scope = rememberCoroutineScope()
@@ -121,6 +122,15 @@ fun App(store: AppStore, player: TonePlayer) {
                     Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)
                     Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, up)
                     Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, up)
+                    Exercise.SHEET_SPEED -> SpeedSheetScreen(
+                        settings = current,
+                        sound = sound,
+                        onResult = record(exercise),
+                        updateSettings = update,
+                        best = speedBest,
+                        onBest = { score -> scope.launch { store.recordSpeedBest(score) } },
+                        onBack = up,
+                    )
                 }
             }
         }

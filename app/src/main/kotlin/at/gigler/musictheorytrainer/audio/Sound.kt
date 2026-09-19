@@ -35,10 +35,16 @@ class Sound(private val player: TonePlayer, val enabled: Boolean, private val vo
         player.playNotes(midis.sorted().mapIndexed { i, midi -> PlayNote(midi, i * STRUM_SECONDS, CHORD_SECONDS - i * STRUM_SECONDS) }, voice)
     }
 
+    /** A short high click for the metronome. */
+    fun click() {
+        if (enabled) player.playNotes(listOf(PlayNote(CLICK_MIDI, 0.0, 0.05)), Voice.TONE)
+    }
+
     fun stop() = player.stop()
 
     private companion object {
         const val STRUM_SECONDS = 0.05
         const val CHORD_SECONDS = 1.8
+        const val CLICK_MIDI = 96
     }
 }

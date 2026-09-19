@@ -247,7 +247,7 @@ private const val TREBLE_CLEF = "𝄞"
  * guitar music sounds an octave lower.
  */
 @Composable
-private fun StaffRow(notes: List<StaffNote>, notation: Notation, current: Int?, verdicts: List<Verdict>) {
+internal fun StaffRow(notes: List<StaffNote>, notation: Notation, current: Int?, verdicts: List<Verdict>) {
     val colors = MaterialTheme.colorScheme
     val measurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.labelMedium

@@ -45,6 +45,9 @@ data class Settings(
     val earIntervalSet: EarIntervalSet = EarIntervalSet.EASY,
     val earHarmonic: Boolean = false,
     val earReference: Boolean = true,
+    val speedSeconds: Int = 60,
+    val metronome: Boolean = false,
+    val metronomeBpm: Int = 60,
 ) {
     /** Always at least one string, low to high. */
     val stringList: List<Int> get() = strings.sorted().ifEmpty { listOf(0) }
@@ -92,6 +95,9 @@ class AppStore(context: Context) {
             prefs[EAR_INTERVAL_SET] = s.earIntervalSet.name
             prefs[EAR_HARMONIC] = s.earHarmonic
             prefs[EAR_REFERENCE] = s.earReference
+            prefs[SPEED_SECONDS] = s.speedSeconds
+            prefs[METRONOME] = s.metronome
+            prefs[METRONOME_BPM] = s.metronomeBpm
         }
     }
 
@@ -100,6 +106,13 @@ class AppStore(context: Context) {
             prefs[totalKey(exercise)] = (prefs[totalKey(exercise)] ?: 0) + 1
             if (correct) prefs[correctKey(exercise)] = (prefs[correctKey(exercise)] ?: 0) + 1
         }
+    }
+
+    /** Best score of the speed run, kept across resets. */
+    val speedBest: Flow<Int> = dataStore.data.map { it[SPEED_BEST] ?: 0 }
+
+    suspend fun recordSpeedBest(score: Int) {
+        dataStore.edit { prefs -> if ((prefs[SPEED_BEST] ?: 0) < score) prefs[SPEED_BEST] = score }
     }
 
     /** Since when the shown counters run; the practice log itself is never cleared. */
@@ -140,6 +153,9 @@ class AppStore(context: Context) {
             earIntervalSet = enumOr(this[EAR_INTERVAL_SET], d.earIntervalSet),
             earHarmonic = this[EAR_HARMONIC] ?: d.earHarmonic,
             earReference = this[EAR_REFERENCE] ?: d.earReference,
+            speedSeconds = this[SPEED_SECONDS] ?: d.speedSeconds,
+            metronome = this[METRONOME] ?: d.metronome,
+            metronomeBpm = this[METRONOME_BPM] ?: d.metronomeBpm,
         )
     }
 
@@ -166,6 +182,10 @@ class AppStore(context: Context) {
         val EAR_INTERVAL_SET = stringPreferencesKey("ear_interval_set")
         val EAR_HARMONIC = booleanPreferencesKey("ear_harmonic")
         val EAR_REFERENCE = booleanPreferencesKey("ear_reference")
+        val SPEED_SECONDS = intPreferencesKey("speed_seconds")
+        val METRONOME = booleanPreferencesKey("metronome")
+        val METRONOME_BPM = intPreferencesKey("metronome_bpm")
+        val SPEED_BEST = intPreferencesKey("speed_best")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")
