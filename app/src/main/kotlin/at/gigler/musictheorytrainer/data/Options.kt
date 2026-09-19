@@ -7,6 +7,7 @@ import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
 import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.RhythmLevel
 import at.gigler.musictheorytrainer.theory.StaffRange
 
 /**
@@ -146,7 +147,7 @@ object Options {
 
     val sheetExactOctave = Option.Switch(
         "Gitarre: exakte Oktave",
-        hint = "Die Note muss auf der richtigen Saite liegen, nicht nur den richtigen Namen haben.",
+        hint = "Die Note muss in der richtigen Oktave klingen, nicht nur den richtigen Namen haben. Wo du sie greifst, ist egal: dasselbe e gibt es auf mehreren Saiten.",
         checked = { it.sheetExactOctave },
         set = { s, v -> s.copy(sheetExactOctave = v) },
     )
@@ -212,6 +213,29 @@ object Options {
         set = { s, v -> s.copy(metronomeBpm = v) },
     )
 
+    val rhythmLevel = choice(
+        "Notenwerte",
+        values = RhythmLevel.entries,
+        labels = RhythmLevel.entries.map { it.label },
+        get = { it.rhythmLevel },
+        set = { s, v -> s.copy(rhythmLevel = v) },
+    )
+
+    val rhythmRests = Option.Switch(
+        "Pausen",
+        hint = "Streut Pausenzeichen ein, durch die du schweigst.",
+        checked = { it.rhythmRests },
+        set = { s, v -> s.copy(rhythmRests = v) },
+    )
+
+    val rhythmBars = choice(
+        "Takte pro Runde",
+        values = listOf(2, 4, 8),
+        labels = listOf("2", "4", "8"),
+        get = { it.rhythmBars },
+        set = { s, v -> s.copy(rhythmBars = v) },
+    )
+
     /** Shown in every exercise, below its own options. */
     val general: List<Option> = listOf(notation, inputMode, sound, voice)
 
@@ -224,6 +248,8 @@ object Options {
         Exercise.EAR_INTERVAL -> listOf(earIntervalSet, earHarmonic)
         Exercise.EAR_QUALITY, Exercise.EAR_CHORD -> listOf(earHarmonic)
         Exercise.EAR_PITCH -> listOf(earReference, hideKeyLabels)
+        Exercise.SHEET_RHYTHM ->
+            listOf(rhythmLevel, rhythmRests, rhythmBars, metronomeBpm, sheetRange, sheetExactOctave, hideStringNames, hideKeyLabels)
         Exercise.SHEET_SPEED ->
             listOf(speedSeconds, metronome, metronomeBpm, sheetRange, sheetExactOctave, hideStringNames, hideKeyLabels)
     }

@@ -13,6 +13,7 @@ enum class Exercise(val category: Category, val title: String, val hint: String)
     CHORDS(Category.FRETBOARD, "Akkorde", "Dreiklänge aus Tönen oder als Griff"),
     SHEET(Category.NOTES, "Notenlesen", "Noten im Violinschlüssel benennen"),
     SHEET_SPEED(Category.NOTES, "Notenlesen auf Zeit", "So viele Noten wie möglich, Tempo zählt"),
+    SHEET_RHYTHM(Category.NOTES, "Im Takt lesen", "Mit Notenwerten und Metronom, Timing wird bewertet"),
     INTERVALS(Category.THEORY, "Intervalle", "Halbtöne auf- und abwärts rechnen"),
     SCALE(Category.THEORY, "Tonleitern", "Dur und Moll Ton für Ton bauen"),
     EAR_INTERVAL(Category.HEAR, "Intervalle hören", "Zwei Töne: welcher Abstand?"),

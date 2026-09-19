@@ -44,6 +44,7 @@ fun SpeedSheetScreen(
     onResult: (Boolean) -> Unit,
     updateSettings: ((Settings) -> Settings) -> Unit,
     best: Int,
+    bestLabel: String,
     onBest: (Int) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -99,7 +100,7 @@ fun SpeedSheetScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 StaffRow(
-                    notes = chunk,
+                    events = plainNotes(chunk),
                     notation = settings.notation,
                     current = index - row * SheetQuiz.LINE_LENGTH,
                     verdicts = results.drop(row * SheetQuiz.LINE_LENGTH),
@@ -137,8 +138,15 @@ fun SpeedSheetScreen(
                 )
                 val perMinute = hits * 60 / settings.speedSeconds.coerceAtLeast(1)
                 Text(
-                    "$perMinute Noten pro Minute · ${results.size} Versuche · Bestwert ${maxOf(best, hits)}",
+                    "$perMinute Noten pro Minute · ${results.size} Versuche",
                     style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    "Bestwert ($bestLabel): ${maxOf(best, hits)}",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     textAlign = TextAlign.Center,
@@ -159,7 +167,7 @@ fun SpeedSheetScreen(
                 )
                 if (best > 0) {
                     Text(
-                        "Bestwert: $best",
+                        "Bestwert ($bestLabel): $best",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                         textAlign = TextAlign.Center,

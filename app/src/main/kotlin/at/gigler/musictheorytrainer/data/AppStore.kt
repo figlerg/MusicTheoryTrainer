@@ -15,6 +15,7 @@ import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
 import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.RhythmLevel
 import at.gigler.musictheorytrainer.theory.StaffRange
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -48,6 +49,9 @@ data class Settings(
     val speedSeconds: Int = 60,
     val metronome: Boolean = false,
     val metronomeBpm: Int = 60,
+    val rhythmLevel: RhythmLevel = RhythmLevel.SIMPLE,
+    val rhythmRests: Boolean = false,
+    val rhythmBars: Int = 2,
 ) {
     /** Always at least one string, low to high. */
     val stringList: List<Int> get() = strings.sorted().ifEmpty { listOf(0) }
@@ -98,6 +102,9 @@ class AppStore(context: Context) {
             prefs[SPEED_SECONDS] = s.speedSeconds
             prefs[METRONOME] = s.metronome
             prefs[METRONOME_BPM] = s.metronomeBpm
+            prefs[RHYTHM_LEVEL] = s.rhythmLevel.name
+            prefs[RHYTHM_RESTS] = s.rhythmRests
+            prefs[RHYTHM_BARS] = s.rhythmBars
         }
     }
 
@@ -108,11 +115,11 @@ class AppStore(context: Context) {
         }
     }
 
-    /** Best score of the speed run, kept across resets. */
-    val speedBest: Flow<Int> = dataStore.data.map { it[SPEED_BEST] ?: 0 }
+    /** Best score of one setup; different setups are not comparable and keep their own. */
+    fun best(variant: String): Flow<Int> = dataStore.data.map { it[bestKey(variant)] ?: 0 }
 
-    suspend fun recordSpeedBest(score: Int) {
-        dataStore.edit { prefs -> if ((prefs[SPEED_BEST] ?: 0) < score) prefs[SPEED_BEST] = score }
+    suspend fun recordBest(variant: String, score: Int) {
+        dataStore.edit { prefs -> if ((prefs[bestKey(variant)] ?: 0) < score) prefs[bestKey(variant)] = score }
     }
 
     /** Since when the shown counters run; the practice log itself is never cleared. */
@@ -156,6 +163,9 @@ class AppStore(context: Context) {
             speedSeconds = this[SPEED_SECONDS] ?: d.speedSeconds,
             metronome = this[METRONOME] ?: d.metronome,
             metronomeBpm = this[METRONOME_BPM] ?: d.metronomeBpm,
+            rhythmLevel = enumOr(this[RHYTHM_LEVEL], d.rhythmLevel),
+            rhythmRests = this[RHYTHM_RESTS] ?: d.rhythmRests,
+            rhythmBars = this[RHYTHM_BARS] ?: d.rhythmBars,
         )
     }
 
@@ -185,7 +195,11 @@ class AppStore(context: Context) {
         val SPEED_SECONDS = intPreferencesKey("speed_seconds")
         val METRONOME = booleanPreferencesKey("metronome")
         val METRONOME_BPM = intPreferencesKey("metronome_bpm")
-        val SPEED_BEST = intPreferencesKey("speed_best")
+        val RHYTHM_LEVEL = stringPreferencesKey("rhythm_level")
+        val RHYTHM_RESTS = booleanPreferencesKey("rhythm_rests")
+        val RHYTHM_BARS = intPreferencesKey("rhythm_bars")
+
+        fun bestKey(variant: String) = intPreferencesKey("best_$variant")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,6 +17,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,6 +35,9 @@ import at.gigler.musictheorytrainer.data.Option
 import at.gigler.musictheorytrainer.data.Options
 import at.gigler.musictheorytrainer.data.Settings
 import at.gigler.musictheorytrainer.theory.Guitar
+
+/** Longer than this many characters in total and the segments would truncate. */
+private const val SEGMENT_BUDGET = 26
 
 /** An exercise screen. Its parameters sit behind one button in the header, next to the title. */
 @Composable
@@ -83,12 +89,39 @@ fun OptionRow(option: Option, settings: Settings, onChange: ((Settings) -> Setti
     when (option) {
         is Option.Choice -> {
             OptionLabel(option)
-            Segmented(
-                option.labels.indices.toList(),
-                option.selected(settings),
-                { option.labels[it] },
-                { index -> onChange { option.select(it, index) } },
-            )
+            val selected = option.selected(settings)
+            // Segments would cut long names off, so those become a list instead.
+            if (option.labels.sumOf { it.length } > SEGMENT_BUDGET) {
+                Column(Modifier.fillMaxWidth().selectableGroup()) {
+                    option.labels.forEachIndexed { index, label ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .selectable(
+                                    selected = index == selected,
+                                    role = Role.RadioButton,
+                                    onClick = { onChange { option.select(it, index) } },
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = index == selected, onClick = null)
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
+                }
+            } else {
+                Segmented(
+                    option.labels.indices.toList(),
+                    selected,
+                    { option.labels[it] },
+                    { index -> onChange { option.select(it, index) } },
+                )
+            }
         }
 
         is Option.Switch -> {

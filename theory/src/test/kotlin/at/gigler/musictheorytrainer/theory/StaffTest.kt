@@ -42,7 +42,7 @@ class StaffTest {
     @Test
     fun `every note of the guitar range is playable in frets 0 to 5`() {
         val first = (0 until Guitar.STRING_COUNT).flatMap { s -> (0..5).map { Guitar.midiAt(FretPosition(s, it)) } }.toSet()
-        for (position in StaffRange.GUITAR.low..StaffRange.GUITAR.high) {
+        for (position in StaffRange.FIRST_POSITION.low..StaffRange.FIRST_POSITION.high) {
             assertTrue(StaffNote.fromPosition(position).guitarMidi in first)
         }
     }

@@ -1,6 +1,6 @@
 package at.gigler.musictheorytrainer.ui
 
-import android.graphics.Paint
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -109,7 +109,7 @@ fun SheetScreen(
             line.notes.chunked(SheetQuiz.LINE_LENGTH).forEachIndexed { row, chunk ->
                 val offset = row * SheetQuiz.LINE_LENGTH
                 StaffRow(
-                    notes = chunk,
+                    events = plainNotes(chunk),
                     notation = notation,
                     current = (index - offset).takeIf { it in chunk.indices },
                     verdicts = results.drop(offset).take(chunk.size),
@@ -216,7 +216,7 @@ private fun SheetExplanation(note: StaffNote, wrong: EnteredNote?, unreadable: B
     val places = Guitar.ALL_STRINGS.flatMap { s -> (0..GUITAR_KEYS_LAST_FRET).map { FretPosition(s, it) } }
         .filter { Guitar.midiAt(it) == note.guitarMidi }
     ExplanationDialog("Note: ${note.name(notation)}", onDismiss) {
-        StaffRow(listOf(note), notation, current = null, verdicts = listOf(Verdict.CORRECT))
+        StaffRow(plainNotes(listOf(note)), notation, current = null, verdicts = listOf(Verdict.CORRECT))
         Text("Die Note steht ${placeOf(note)}.", style = MaterialTheme.typography.bodyMedium)
         Text("Linien von unten: $lines\nZwischenräume von unten: $spaces", style = MaterialTheme.typography.bodyMedium)
         if (places.isNotEmpty()) {
@@ -237,65 +237,3 @@ private fun SheetExplanation(note: StaffNote, wrong: EnteredNote?, unreadable: B
     }
 }
 
-/** True if the system font can draw the treble clef symbol. */
-private val clefGlyphAvailable: Boolean by lazy { Paint().hasGlyph(TREBLE_CLEF) }
-private const val TREBLE_CLEF = "𝄞"
-
-/**
- * One line of treble-clef notation without rhythm: note heads only, answered notes coloured and
- * named below the staff, the current note highlighted. The small 8 under the clef marks that
- * guitar music sounds an octave lower.
- */
-@Composable
-internal fun StaffRow(notes: List<StaffNote>, notation: Notation, current: Int?, verdicts: List<Verdict>) {
-    val colors = MaterialTheme.colorScheme
-    val measurer = rememberTextMeasurer()
-    val labelStyle = MaterialTheme.typography.labelMedium
-    val feedback = LocalFeedbackColors.current
-    val low = minOf(notes.minOf { it.staffPosition } - 4, -4)
-    val high = maxOf(notes.maxOf { it.staffPosition } + 2, 11)
-    val step = 6.dp
-
-    Canvas(Modifier.fillMaxWidth().height(step * (high - low))) {
-        val s = step.toPx() * 2
-        fun y(position: Int) = (high - position) * step.toPx()
-        val clefWidth = 44.dp.toPx()
-        val slot = (size.width - clefWidth - 8.dp.toPx()) / SheetQuiz.LINE_LENGTH
-        fun x(i: Int) = clefWidth + (i + 0.5f) * slot
-
-        current?.let { i ->
-            drawRoundRect(
-                colors.primaryContainer,
-                Offset(x(i) - slot * 0.45f, y(10)),
-                Size(slot * 0.9f, y(-2) - y(10)),
-                CornerRadius(6.dp.toPx()),
-            )
-        }
-        for (line in listOf(0, 2, 4, 6, 8)) {
-            drawLine(colors.onSurfaceVariant, Offset(4.dp.toPx(), y(line)), Offset(size.width - 4.dp.toPx(), y(line)), 1.2.dp.toPx())
-        }
-        if (clefGlyphAvailable) {
-            drawCentered(measurer, TREBLE_CLEF, Offset(clefWidth / 2, y(4) + 0.1f * s), TextStyle(color = colors.onSurface, fontSize = (s * 3.6f).toSp()))
-        } else {
-            drawCentered(measurer, "G", Offset(clefWidth / 2, y(2)), TextStyle(color = colors.onSurface, fontSize = (s * 2f).toSp()))
-        }
-        drawCentered(measurer, "8", Offset(clefWidth / 2, y(-3)), labelStyle.copy(color = colors.onSurface))
-
-        notes.forEachIndexed { i, note ->
-            val p = note.staffPosition
-            val color: Color = when (verdicts.getOrNull(i)) {
-                Verdict.CORRECT -> feedback.correct
-                Verdict.UNUSUAL -> feedback.unusual
-                Verdict.WRONG -> colors.error
-                null -> if (i == current) colors.primary else colors.onSurface
-            }
-            for (ledger in note.ledgerLines()) {
-                drawLine(colors.onSurfaceVariant, Offset(x(i) - s * 0.9f, y(ledger)), Offset(x(i) + s * 0.9f, y(ledger)), 1.2.dp.toPx())
-            }
-            drawOval(color, Offset(x(i) - s * 0.62f, y(p) - s * 0.45f), Size(s * 1.24f, s * 0.9f))
-            if (i < verdicts.size) {
-                drawCentered(measurer, note.name(notation), Offset(x(i), y(low + 1)), labelStyle.copy(color = color))
-            }
-        }
-    }
-}

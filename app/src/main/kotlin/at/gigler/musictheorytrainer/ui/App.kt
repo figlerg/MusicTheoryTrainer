@@ -26,6 +26,8 @@ import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.PracticeEntry
 import at.gigler.musictheorytrainer.data.PracticeLog
 import at.gigler.musictheorytrainer.data.Settings
+import at.gigler.musictheorytrainer.data.variantKey
+import at.gigler.musictheorytrainer.data.variantLabel
 import at.gigler.musictheorytrainer.data.optionSummary
 import kotlinx.coroutines.launch
 import java.io.File
@@ -51,7 +53,6 @@ fun App(store: AppStore, player: TonePlayer) {
     val settings by store.settings.collectAsState(initial = null)
     val scores by store.scores.collectAsState(initial = emptyMap())
     val periodStart by store.periodStart.collectAsState(initial = 0L)
-    val speedBest by store.speedBest.collectAsState(initial = 0)
     val context = LocalContext.current
     val log = remember(context) { PracticeLog(File(context.filesDir, "practice-log.tsv")) }
     val scope = rememberCoroutineScope()
@@ -65,6 +66,11 @@ fun App(store: AppStore, player: TonePlayer) {
         // DataStore answers within milliseconds; showing nothing until then avoids flashing defaults.
         val current = settings ?: return@Surface
         val sound = remember(current.sound, current.voice) { Sound(player, current.sound, current.voice) }
+        // Best scores belong to the setup they were played in.
+        val speedVariant = variantKey(Exercise.SHEET_SPEED, current)
+        val rhythmVariant = variantKey(Exercise.SHEET_RHYTHM, current)
+        val speedBest by remember(speedVariant) { store.best(speedVariant) }.collectAsState(initial = 0)
+        val rhythmBest by remember(rhythmVariant) { store.best(rhythmVariant) }.collectAsState(initial = 0)
         val up = { screen = screen?.let(::parentOf) }
         fun record(exercise: Exercise): (Boolean) -> Unit = { correct ->
             scope.launch {
@@ -122,13 +128,24 @@ fun App(store: AppStore, player: TonePlayer) {
                     Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)
                     Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, up)
                     Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, up)
+                    Exercise.SHEET_RHYTHM -> RhythmSheetScreen(
+                        settings = current,
+                        sound = sound,
+                        onResult = record(exercise),
+                        updateSettings = update,
+                        best = rhythmBest,
+                        bestLabel = variantLabel(Exercise.SHEET_RHYTHM, current),
+                        onBest = { score -> scope.launch { store.recordBest(rhythmVariant, score) } },
+                        onBack = up,
+                    )
                     Exercise.SHEET_SPEED -> SpeedSheetScreen(
                         settings = current,
                         sound = sound,
                         onResult = record(exercise),
                         updateSettings = update,
                         best = speedBest,
-                        onBest = { score -> scope.launch { store.recordSpeedBest(score) } },
+                        bestLabel = variantLabel(Exercise.SHEET_SPEED, current),
+                        onBest = { score -> scope.launch { store.recordBest(speedVariant, score) } },
                         onBack = up,
                     )
                 }
