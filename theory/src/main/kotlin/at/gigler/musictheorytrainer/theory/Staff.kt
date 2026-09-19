@@ -41,12 +41,18 @@ data class StaffNote(val letter: Letter, val octave: Int) {
     }
 }
 
-enum class StaffRange(val low: Int, val high: Int) {
+enum class StaffRange(val low: Int, val high: Int, val label: String) {
     /** D4 (hanging below the bottom line) to G5 (on top of the staff), no ledger lines. */
-    IN_STAFF(-1, 9),
+    IN_STAFF(-1, 9, "Im System"),
 
-    /** The guitar's first position as written: E3 (low E string) to A5 (high e, 5th fret). */
-    GUITAR(-7, 10),
+    /** First position as written: E3 (low E string) to A5 (high e, 5th fret). */
+    GUITAR(-7, 10, "Erste Lage"),
+
+    /** The low strings, written with ledger lines below the staff: E3 to G4. */
+    BASS(-7, 2, "Bass-Saiten"),
+
+    /** Everything the neck offers up to the 12th fret: E3 to E6 as written. */
+    WIDE(-7, 17, "Ganzer Hals"),
 }
 
 /** A melody with rhythm: [beats] are note lengths in quarter notes, played at [bpm]. */

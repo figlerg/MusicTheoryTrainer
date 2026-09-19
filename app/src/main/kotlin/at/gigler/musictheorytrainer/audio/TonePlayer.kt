@@ -23,14 +23,14 @@ class TonePlayer {
     /** True while a tone or phrase is sounding. */
     val playing: StateFlow<Boolean> = playingState
 
-    fun play(midi: Int) = playNotes(listOf(PlayNote(midi, 0.0, SINGLE_SECONDS)))
+    fun play(midi: Int, voice: Voice = Voice.PLUCK) = playNotes(listOf(PlayNote(midi, 0.0, SINGLE_SECONDS)), voice)
 
-    fun playNotes(notes: List<PlayNote>) {
+    fun playNotes(notes: List<PlayNote>, voice: Voice = Voice.PLUCK) {
         if (notes.isEmpty()) return
         val mine = generation.incrementAndGet()
         playingState.value = true
         executor.execute {
-            if (generation.get() == mine) stream(Synth.render(notes), mine)
+            if (generation.get() == mine) stream(Synth.render(notes, voice), mine)
         }
     }
 

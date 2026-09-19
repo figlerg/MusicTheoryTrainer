@@ -63,7 +63,7 @@ fun App(store: AppStore, player: TonePlayer) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         // DataStore answers within milliseconds; showing nothing until then avoids flashing defaults.
         val current = settings ?: return@Surface
-        val sound = remember(current.sound) { Sound(player, current.sound) }
+        val sound = remember(current.sound, current.voice) { Sound(player, current.sound, current.voice) }
         val up = { screen = screen?.let(::parentOf) }
         fun record(exercise: Exercise): (Boolean) -> Unit = { correct ->
             scope.launch {

@@ -1,5 +1,6 @@
 package at.gigler.musictheorytrainer.data
 
+import at.gigler.musictheorytrainer.audio.Voice
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
@@ -76,6 +77,15 @@ object Options {
 
     val sound = Option.Switch("Ton abspielen", checked = { it.sound }, set = { s, v -> s.copy(sound = v) })
 
+    val voice = choice(
+        "Klang",
+        hint = "Gitarre zupft eine Saite an, Ton ist ein weicher Synth-Klang.",
+        values = Voice.entries,
+        labels = listOf("Ton", "Gitarre"),
+        get = { it.voice },
+        set = { s, v -> s.copy(voice = v) },
+    )
+
     val showTab = Option.Switch("Tab-Ansicht", checked = { it.showTab }, set = { s, v -> s.copy(showTab = v) })
 
     val strings = Option.Strings(
@@ -128,7 +138,7 @@ object Options {
         "Tonumfang",
         hint = "Gilt für Zufallszeilen.",
         values = StaffRange.entries,
-        labels = listOf("Im System", "Mit Hilfslinien"),
+        labels = StaffRange.entries.map { it.label },
         get = { it.sheetRange },
         set = { s, v -> s.copy(sheetRange = v) },
     )
@@ -155,7 +165,7 @@ object Options {
     )
 
     /** Shown in every exercise, below its own options. */
-    val general: List<Option> = listOf(notation, inputMode, sound)
+    val general: List<Option> = listOf(notation, inputMode, sound, voice)
 
     fun of(exercise: Exercise): List<Option> = when (exercise) {
         Exercise.FRETBOARD -> listOf(strings, showTab, hideKeyLabels)

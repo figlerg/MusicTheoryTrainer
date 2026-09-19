@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import at.gigler.musictheorytrainer.audio.Voice
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
@@ -29,6 +30,7 @@ data class Settings(
     val fretboardReverse: Boolean = false,
     val showTab: Boolean = true,
     val sound: Boolean = true,
+    val voice: Voice = Voice.PLUCK,
     val keyChoice: KeyChoice = KeyChoice.MAJOR,
     val keyOrder: KeyOrder = KeyOrder.RANDOM,
     val chordRootGiven: Boolean = false,
@@ -72,6 +74,7 @@ class AppStore(context: Context) {
             prefs[FRETBOARD_REVERSE] = s.fretboardReverse
             prefs[SHOW_TAB] = s.showTab
             prefs[SOUND] = s.sound
+            prefs[VOICE] = s.voice.name
             prefs[KEY_CHOICE] = s.keyChoice.name
             prefs[KEY_ORDER] = s.keyOrder.name
             prefs[CHORD_ROOT_GIVEN] = s.chordRootGiven
@@ -116,6 +119,7 @@ class AppStore(context: Context) {
             fretboardReverse = this[FRETBOARD_REVERSE] ?: d.fretboardReverse,
             showTab = this[SHOW_TAB] ?: d.showTab,
             sound = this[SOUND] ?: d.sound,
+            voice = enumOr(this[VOICE], d.voice),
             keyChoice = enumOr(this[KEY_CHOICE], d.keyChoice),
             keyOrder = enumOr(this[KEY_ORDER], d.keyOrder),
             chordRootGiven = this[CHORD_ROOT_GIVEN] ?: d.chordRootGiven,
@@ -137,6 +141,7 @@ class AppStore(context: Context) {
         val FRETBOARD_REVERSE = booleanPreferencesKey("fretboard_reverse")
         val SHOW_TAB = booleanPreferencesKey("show_tab")
         val SOUND = booleanPreferencesKey("sound")
+        val VOICE = stringPreferencesKey("voice")
         val KEY_CHOICE = stringPreferencesKey("key_choice")
         val KEY_ORDER = stringPreferencesKey("key_order")
         val CHORD_ROOT_GIVEN = booleanPreferencesKey("chord_root_given")
