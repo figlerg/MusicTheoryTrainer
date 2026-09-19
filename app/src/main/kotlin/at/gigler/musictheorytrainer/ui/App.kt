@@ -16,19 +16,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import at.gigler.musictheorytrainer.BuildConfig
 import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.audio.TonePlayer
 import at.gigler.musictheorytrainer.data.AppStore
 import at.gigler.musictheorytrainer.data.Category
 import at.gigler.musictheorytrainer.data.Exercise
+import at.gigler.musictheorytrainer.data.PracticeEntry
+import at.gigler.musictheorytrainer.data.PracticeLog
 import at.gigler.musictheorytrainer.data.Settings
+import at.gigler.musictheorytrainer.data.optionSummary
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Screens are addressed by a small string so they survive process death: null is the home screen,
  * "CAT:<name>" a category, "EX:<name>" an exercise, [SETTINGS_SCREEN] the settings.
  */
 private const val SETTINGS_SCREEN = "SETTINGS"
+private const val STATS_SCREEN = "STATS"
 private const val CATEGORY_PREFIX = "CAT:"
 private const val EXERCISE_PREFIX = "EX:"
 
@@ -43,6 +50,9 @@ private fun parentOf(screen: String): String? = when {
 fun App(store: AppStore, player: TonePlayer) {
     val settings by store.settings.collectAsState(initial = null)
     val scores by store.scores.collectAsState(initial = emptyMap())
+    val periodStart by store.periodStart.collectAsState(initial = 0L)
+    val context = LocalContext.current
+    val log = remember(context) { PracticeLog(File(context.filesDir, "practice-log.tsv")) }
     val scope = rememberCoroutineScope()
     var screen by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -55,7 +65,22 @@ fun App(store: AppStore, player: TonePlayer) {
         val current = settings ?: return@Surface
         val sound = remember(current.sound) { Sound(player, current.sound) }
         val up = { screen = screen?.let(::parentOf) }
-        fun record(exercise: Exercise): (Boolean) -> Unit = { correct -> scope.launch { store.record(exercise, correct) } }
+        fun record(exercise: Exercise): (Boolean) -> Unit = { correct ->
+            scope.launch {
+                store.record(exercise, correct)
+                // Every answer also goes into the practice log, which is never cleared.
+                log.append(
+                    PracticeEntry(
+                        time = System.currentTimeMillis(),
+                        exercise = exercise,
+                        mode = current.inputMode,
+                        hit = correct,
+                        appVersion = BuildConfig.VERSION_CODE,
+                        options = optionSummary(exercise, current),
+                    ),
+                )
+            }
+        }
         val update: ((Settings) -> Settings) -> Unit = { transform -> scope.launch { store.updateSettings(transform) } }
 
         Box(Modifier.safeDrawingPadding()) {
@@ -70,8 +95,15 @@ fun App(store: AppStore, player: TonePlayer) {
                 s == SETTINGS_SCREEN -> SettingsScreen(
                     settings = current,
                     onChange = update,
-                    onResetScores = { scope.launch { store.resetScores() } },
+                    onStats = { screen = STATS_SCREEN },
                     onBack = up,
+                )
+
+                s == STATS_SCREEN -> StatsScreen(
+                    log = log,
+                    periodStart = periodStart,
+                    onResetPeriod = { scope.launch { store.resetScores() } },
+                    onBack = { screen = SETTINGS_SCREEN },
                 )
 
                 s.startsWith(CATEGORY_PREFIX) -> CategoryScreen(

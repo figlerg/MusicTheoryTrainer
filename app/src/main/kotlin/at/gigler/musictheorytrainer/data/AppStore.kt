@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import at.gigler.musictheorytrainer.theory.Guitar
@@ -91,12 +92,16 @@ class AppStore(context: Context) {
         }
     }
 
+    /** Since when the shown counters run; the practice log itself is never cleared. */
+    val periodStart: Flow<Long> = dataStore.data.map { it[PERIOD_START] ?: 0L }
+
     suspend fun resetScores() {
         dataStore.edit { prefs ->
             Exercise.entries.forEach {
                 prefs.remove(correctKey(it))
                 prefs.remove(totalKey(it))
             }
+            prefs[PERIOD_START] = System.currentTimeMillis()
         }
     }
 
@@ -142,6 +147,7 @@ class AppStore(context: Context) {
         val SHEET_EXACT_OCTAVE = booleanPreferencesKey("sheet_exact_octave")
         val HIDE_STRING_NAMES = booleanPreferencesKey("hide_string_names")
         val HIDE_KEY_LABELS = booleanPreferencesKey("hide_key_labels")
+        val PERIOD_START = longPreferencesKey("period_start")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")
