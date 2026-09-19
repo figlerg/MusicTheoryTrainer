@@ -112,7 +112,8 @@ private fun ColumnScope.NameNoteDrill(
         onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
         state = state.inputState,
         onNote = { entered ->
-            val judgement = Answer.judge(entered, answer, notation)
+            // Read from state: a captured expectation can be stale after moving on.
+            val judgement = Answer.judge(entered, Guitar.pitchAt(position), notation)
             state.answer(entered, judgement, onResult)
             if (judgement.result.isHit) sound.play(Guitar.midiAt(position))
         },
@@ -173,13 +174,16 @@ private fun ColumnScope.FindPositionDrill(
         revealed = false
     }
 
+    // The fretboard keeps the callback it was given, so this must not capture the question:
+    // a stale target list would mark correct taps as wrong. Everything here is read from state.
     fun tap(position: FretPosition) {
-        if (done) return
-        if (position in targets) {
+        val live = Guitar.positionsOf(target, strings)
+        if (revealed || found.size == live.size) return
+        if (position in live) {
             if (position in found) return
             found = found + position
             sound.play(Guitar.midiAt(position))
-            if (found.size == targets.size) onResult(wrong.isEmpty())
+            if (found.size == live.size) onResult(wrong.isEmpty())
         } else {
             wrong = wrong + position
         }

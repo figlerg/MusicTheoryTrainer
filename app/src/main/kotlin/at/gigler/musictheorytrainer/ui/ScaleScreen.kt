@@ -77,18 +77,20 @@ fun ScaleScreen(
         val index = slots.size
         val complete = index == drill.targets.size
 
-        /** Only the first attempt per slot counts. */
+        /** Only the first attempt per slot counts. The slot is read from state, never captured. */
         fun countFirst(verdict: Verdict) {
-            if (countedSlot != index) {
+            val slot = slots.size
+            if (countedSlot != slot) {
                 onResult(verdict.isHit)
-                countedSlot = index
+                countedSlot = slot
                 firstVerdict = verdict
             }
         }
 
         fun fill() {
-            slots = slots + Slot(drill.targets[index], firstVerdict ?: Verdict.WRONG)
-            sound.play(rootMidi + current.type.offsets[index + 1])
+            val slot = slots.size
+            slots = slots + Slot(ScaleDrill(current).targets[slot], firstVerdict ?: Verdict.WRONG)
+            sound.play(rootMidi + current.type.offsets[slot + 1])
             wrong = null
             unreadable = false
             firstVerdict = null
@@ -103,7 +105,7 @@ fun ScaleScreen(
                 MistakeActions(
                     onSolution = {
                         countFirst(Verdict.WRONG)
-                        message = "Lösung: ${drill.targets[index].name(notation)}" to null
+                        message = "Lösung: ${drill.targets[slots.size].name(notation)}" to null
                         fill()
                     },
                     onExplain = {
@@ -119,7 +121,7 @@ fun ScaleScreen(
                 onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
                 state = InputState.ACCEPTING,
                 onNote = { entered ->
-                    val check = drill.check(index, entered.pitch)
+                    val check = ScaleDrill(current).check(slots.size, entered.pitch)
                     val judgement = Answer.judge(entered, check.expected.pitchClass, notation, check.expected)
                     val verdict = Verdict.of(judgement.result) ?: return@NoteInput
                     countFirst(verdict)

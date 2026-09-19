@@ -87,10 +87,12 @@ fun SheetScreen(
         val index = results.size
         val complete = index == line.notes.size
 
+        // The note index is read from state: a captured one can be stale after moving on.
         fun countFirst(verdict: Verdict) {
-            if (counted != index) {
+            val at = results.size
+            if (counted != at) {
                 onResult(verdict.isHit)
-                counted = index
+                counted = at
                 firstVerdict = verdict
             }
         }
@@ -127,8 +129,8 @@ fun SheetScreen(
                 MistakeActions(
                     onSolution = {
                         countFirst(Verdict.WRONG)
-                        message = "Lösung: ${note.name(notation)}" to null
-                        sound.play(note.guitarMidi)
+                        message = "Lösung: ${line.notes[results.size].name(notation)}" to null
+                        sound.play(line.notes[results.size].guitarMidi)
                         advance()
                     },
                     onExplain = {
@@ -143,19 +145,19 @@ fun SheetScreen(
                 onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
                 state = InputState.ACCEPTING,
                 onNote = { entered ->
-                    val judgement = Answer.judge(entered, note.pitchClass, notation)
+                    val judgement = Answer.judge(entered, line.notes[results.size].pitchClass, notation)
                     var verdict = Verdict.of(judgement.result) ?: return@NoteInput
                     val position = entered.position
                     val wrongOctave = settings.sheetExactOctave && position != null && verdict.isHit &&
-                        Guitar.midiAt(position) != note.guitarMidi
+                        Guitar.midiAt(position) != line.notes[results.size].guitarMidi
                     if (wrongOctave) verdict = Verdict.WRONG
                     countFirst(verdict)
                     if (verdict.isHit) {
                         message = (
-                            if (verdict == Verdict.CORRECT) "Richtig: ${note.name(notation)}"
+                            if (verdict == Verdict.CORRECT) "Richtig: ${line.notes[results.size].name(notation)}"
                             else "Richtig (üblich: ${judgement.usualName})"
                             ) to verdict
-                        sound.play(note.guitarMidi)
+                        sound.play(line.notes[results.size].guitarMidi)
                         advance()
                     } else {
                         wrong = entered
