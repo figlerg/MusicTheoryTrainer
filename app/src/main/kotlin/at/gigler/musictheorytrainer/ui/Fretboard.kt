@@ -55,6 +55,7 @@ fun Fretboard(
     lastFret: Int = Guitar.MAX_FRET,
     activeStrings: Collection<Int> = Guitar.ALL_STRINGS,
     mutedStrings: Set<Int> = emptySet(),
+    showStringNames: Boolean = true,
     onTap: ((FretPosition) -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -116,15 +117,17 @@ fun Fretboard(
                 Offset(x, size.height),
                 (2.6f - string * 0.3f).dp.toPx(),
             )
-            drawCentered(
-                measurer,
-                Guitar.stringName(string, notation),
-                Offset(x, g.top / 2),
-                smallText.copy(
-                    color = colors.onSurface.copy(alpha = if (isActive) 1f else 0.35f),
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
+            if (showStringNames) {
+                drawCentered(
+                    measurer,
+                    Guitar.stringName(string, notation),
+                    Offset(x, g.top / 2),
+                    smallText.copy(
+                        color = colors.onSurface.copy(alpha = if (isActive) 1f else 0.35f),
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
         }
 
         val radius = min(g.columnWidth, g.rowHeight) * 0.42f

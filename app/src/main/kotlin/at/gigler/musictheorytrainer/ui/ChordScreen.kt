@@ -57,7 +57,7 @@ fun ChordScreen(
     updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ScreenScaffold(Exercise.CHORDS.title, onBack) {
+    ExerciseScaffold(Exercise.CHORDS, settings, updateSettings, onBack) {
         Segmented(
             listOf(false, true),
             settings.chordGrip,
@@ -204,6 +204,7 @@ private fun ColumnScope.ToneDrill(
         NoteInput(
             notation = notation,
             mode = settings.inputMode,
+            hideKeyLabels = settings.hideKeyLabels,
             onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
             state = InputState.ACCEPTING,
             onNote = ::enter,

@@ -46,7 +46,7 @@ fun FretboardScreen(
     updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ScreenScaffold(Exercise.FRETBOARD.title, onBack) {
+    ExerciseScaffold(Exercise.FRETBOARD, settings, updateSettings, onBack) {
         Segmented(
             listOf(false, true),
             settings.fretboardReverse,
@@ -54,7 +54,7 @@ fun FretboardScreen(
             { reverse -> updateSettings { it.copy(fretboardReverse = reverse) } },
         )
         Spacer(Modifier.height(8.dp))
-        val strings = settings.stringSet.strings
+        val strings = settings.stringList
         key(strings, settings.fretboardReverse) {
             if (settings.fretboardReverse) {
                 FindPositionDrill(settings, strings, sound, onResult)
@@ -109,6 +109,7 @@ private fun ColumnScope.NameNoteDrill(
     NoteInput(
         notation = notation,
         mode = settings.inputMode,
+        hideKeyLabels = settings.hideKeyLabels,
         onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
         state = state.inputState,
         onNote = { entered ->

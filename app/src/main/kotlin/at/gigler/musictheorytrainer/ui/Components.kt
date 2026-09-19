@@ -58,19 +58,11 @@ enum class Verdict {
     }
 }
 
-val Exercise.title: String
-    get() = when (this) {
-        Exercise.FRETBOARD -> "Griffbrett-Töne"
-        Exercise.INTERVALS -> "Intervalle"
-        Exercise.SCALE -> "Tonleitern"
-        Exercise.CHORDS -> "Akkorde"
-        Exercise.SHEET -> "Notenlesen"
-    }
-
 @Composable
 fun ScreenScaffold(
     title: String,
     onBack: (() -> Unit)?,
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -81,8 +73,9 @@ fun ScreenScaffold(
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(start = if (onBack != null) 4.dp else 0.dp),
+                modifier = Modifier.padding(start = if (onBack != null) 4.dp else 0.dp).weight(1f),
             )
+            action?.invoke()
         }
         content()
     }

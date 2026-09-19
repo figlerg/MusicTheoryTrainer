@@ -19,12 +19,25 @@ import androidx.compose.ui.Modifier
 import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.audio.TonePlayer
 import at.gigler.musictheorytrainer.data.AppStore
+import at.gigler.musictheorytrainer.data.Category
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
 import kotlinx.coroutines.launch
 
-/** null is the home screen, [SETTINGS_SCREEN] the settings, anything else an exercise. */
+/**
+ * Screens are addressed by a small string so they survive process death: null is the home screen,
+ * "CAT:<name>" a category, "EX:<name>" an exercise, [SETTINGS_SCREEN] the settings.
+ */
 private const val SETTINGS_SCREEN = "SETTINGS"
+private const val CATEGORY_PREFIX = "CAT:"
+private const val EXERCISE_PREFIX = "EX:"
+
+/** Back goes one level up: exercise to its category, everything else home. */
+private fun parentOf(screen: String): String? = when {
+    screen.startsWith(EXERCISE_PREFIX) ->
+        CATEGORY_PREFIX + Exercise.valueOf(screen.removePrefix(EXERCISE_PREFIX)).category.name
+    else -> null
+}
 
 @Composable
 fun App(store: AppStore, player: TonePlayer) {
@@ -33,7 +46,7 @@ fun App(store: AppStore, player: TonePlayer) {
     val scope = rememberCoroutineScope()
     var screen by rememberSaveable { mutableStateOf<String?>(null) }
 
-    BackHandler(enabled = screen != null) { screen = null }
+    BackHandler(enabled = screen != null) { screen = screen?.let(::parentOf) }
     // Leaving a screen ends whatever it was playing.
     LaunchedEffect(screen) { player.stop() }
 
@@ -41,25 +54,39 @@ fun App(store: AppStore, player: TonePlayer) {
         // DataStore answers within milliseconds; showing nothing until then avoids flashing defaults.
         val current = settings ?: return@Surface
         val sound = remember(current.sound) { Sound(player, current.sound) }
-        val home = { screen = null }
+        val up = { screen = screen?.let(::parentOf) }
         fun record(exercise: Exercise): (Boolean) -> Unit = { correct -> scope.launch { store.record(exercise, correct) } }
         val update: ((Settings) -> Settings) -> Unit = { transform -> scope.launch { store.updateSettings(transform) } }
 
         Box(Modifier.safeDrawingPadding()) {
-            when (val s = screen) {
-                null -> HomeScreen(scores = scores, onOpen = { screen = it.name }, onSettings = { screen = SETTINGS_SCREEN })
-                SETTINGS_SCREEN -> SettingsScreen(
+            val s = screen
+            when {
+                s == null -> HomeScreen(
+                    scores = scores,
+                    onOpen = { screen = CATEGORY_PREFIX + it.name },
+                    onSettings = { screen = SETTINGS_SCREEN },
+                )
+
+                s == SETTINGS_SCREEN -> SettingsScreen(
                     settings = current,
                     onChange = update,
                     onResetScores = { scope.launch { store.resetScores() } },
-                    onBack = home,
+                    onBack = up,
                 )
-                else -> when (val exercise = Exercise.valueOf(s)) {
-                    Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, home)
-                    Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, home)
-                    Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, home)
-                    Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, home)
-                    Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, home)
+
+                s.startsWith(CATEGORY_PREFIX) -> CategoryScreen(
+                    category = Category.valueOf(s.removePrefix(CATEGORY_PREFIX)),
+                    scores = scores,
+                    onOpen = { screen = EXERCISE_PREFIX + it.name },
+                    onBack = up,
+                )
+
+                else -> when (val exercise = Exercise.valueOf(s.removePrefix(EXERCISE_PREFIX))) {
+                    Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, up)
+                    Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, up)
+                    Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)
+                    Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, up)
+                    Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, up)
                 }
             }
         }

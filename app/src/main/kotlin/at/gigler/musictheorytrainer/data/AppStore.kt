@@ -18,19 +18,12 @@ import kotlinx.coroutines.flow.map
 
 enum class InputMode { TEXT, KEYS, GUITAR }
 
-enum class StringSet(val strings: List<Int>) {
-    LOW_E_AND_A(listOf(0, 1)),
-    ALL(Guitar.ALL_STRINGS),
-}
-
 enum class SheetSource { MELODIES, RANDOM }
-
-enum class Exercise { FRETBOARD, INTERVALS, SCALE, CHORDS, SHEET }
 
 data class Settings(
     val notation: Notation = Notation.GERMAN,
     val inputMode: InputMode = InputMode.TEXT,
-    val stringSet: StringSet = StringSet.LOW_E_AND_A,
+    val strings: Set<Int> = Guitar.ALL_STRINGS.toSet(),
     val intervalDifficulty: IntervalDifficulty = IntervalDifficulty.EASY,
     val fretboardReverse: Boolean = false,
     val showTab: Boolean = true,
@@ -42,11 +35,18 @@ data class Settings(
     val gripRootInBass: Boolean = true,
     val sheetSource: SheetSource = SheetSource.MELODIES,
     val sheetRange: StaffRange = StaffRange.IN_STAFF,
-    val sheetExactOctave: Boolean = false,
-)
+    val sheetExactOctave: Boolean = true,
+    val hideStringNames: Boolean = false,
+    val hideKeyLabels: Boolean = false,
+) {
+    /** Always at least one string, low to high. */
+    val stringList: List<Int> get() = strings.sorted().ifEmpty { listOf(0) }
+}
 
 data class Score(val correct: Int = 0, val total: Int = 0) {
     val percent: Int? get() = if (total == 0) null else (correct * 100 + total / 2) / total
+
+    operator fun plus(other: Score) = Score(correct + other.correct, total + other.total)
 }
 
 private val Context.dataStore by preferencesDataStore(name = "trainer")
@@ -66,7 +66,7 @@ class AppStore(context: Context) {
             val s = transform(prefs.toSettings())
             prefs[NOTATION] = s.notation.name
             prefs[INPUT_MODE] = s.inputMode.name
-            prefs[STRING_SET] = s.stringSet.name
+            prefs[STRINGS] = s.stringList.joinToString(",")
             prefs[INTERVAL_DIFFICULTY] = s.intervalDifficulty.name
             prefs[FRETBOARD_REVERSE] = s.fretboardReverse
             prefs[SHOW_TAB] = s.showTab
@@ -79,6 +79,8 @@ class AppStore(context: Context) {
             prefs[SHEET_SOURCE] = s.sheetSource.name
             prefs[SHEET_RANGE] = s.sheetRange.name
             prefs[SHEET_EXACT_OCTAVE] = s.sheetExactOctave
+            prefs[HIDE_STRING_NAMES] = s.hideStringNames
+            prefs[HIDE_KEY_LABELS] = s.hideKeyLabels
         }
     }
 
@@ -103,7 +105,8 @@ class AppStore(context: Context) {
         return Settings(
             notation = enumOr(this[NOTATION], d.notation),
             inputMode = enumOr(this[INPUT_MODE], d.inputMode),
-            stringSet = enumOr(this[STRING_SET], d.stringSet),
+            strings = this[STRINGS]?.split(",")?.mapNotNull { it.trim().toIntOrNull() }
+                ?.filter { it in Guitar.ALL_STRINGS }?.toSet()?.ifEmpty { null } ?: d.strings,
             intervalDifficulty = enumOr(this[INTERVAL_DIFFICULTY], d.intervalDifficulty),
             fretboardReverse = this[FRETBOARD_REVERSE] ?: d.fretboardReverse,
             showTab = this[SHOW_TAB] ?: d.showTab,
@@ -116,13 +119,15 @@ class AppStore(context: Context) {
             sheetSource = enumOr(this[SHEET_SOURCE], d.sheetSource),
             sheetRange = enumOr(this[SHEET_RANGE], d.sheetRange),
             sheetExactOctave = this[SHEET_EXACT_OCTAVE] ?: d.sheetExactOctave,
+            hideStringNames = this[HIDE_STRING_NAMES] ?: d.hideStringNames,
+            hideKeyLabels = this[HIDE_KEY_LABELS] ?: d.hideKeyLabels,
         )
     }
 
     private companion object {
         val NOTATION = stringPreferencesKey("notation")
         val INPUT_MODE = stringPreferencesKey("input_mode")
-        val STRING_SET = stringPreferencesKey("string_set")
+        val STRINGS = stringPreferencesKey("strings")
         val INTERVAL_DIFFICULTY = stringPreferencesKey("interval_difficulty")
         val FRETBOARD_REVERSE = booleanPreferencesKey("fretboard_reverse")
         val SHOW_TAB = booleanPreferencesKey("show_tab")
@@ -135,6 +140,8 @@ class AppStore(context: Context) {
         val SHEET_SOURCE = stringPreferencesKey("sheet_source")
         val SHEET_RANGE = stringPreferencesKey("sheet_range")
         val SHEET_EXACT_OCTAVE = booleanPreferencesKey("sheet_exact_octave")
+        val HIDE_STRING_NAMES = booleanPreferencesKey("hide_string_names")
+        val HIDE_KEY_LABELS = booleanPreferencesKey("hide_key_labels")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")

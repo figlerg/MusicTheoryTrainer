@@ -66,7 +66,7 @@ fun SheetScreen(
     updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ScreenScaffold(Exercise.SHEET.title, onBack) {
+    ExerciseScaffold(Exercise.SHEET, settings, updateSettings, onBack) {
         val notation = settings.notation
         Segmented(
             SheetSource.entries,
@@ -142,6 +142,8 @@ fun SheetScreen(
             NoteInput(
                 notation = notation,
                 mode = settings.inputMode,
+                hideKeyLabels = settings.hideKeyLabels,
+                showStringNames = !settings.hideStringNames,
                 onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
                 state = InputState.ACCEPTING,
                 onNote = { entered ->

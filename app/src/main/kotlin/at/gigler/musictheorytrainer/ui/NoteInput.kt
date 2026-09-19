@@ -76,6 +76,8 @@ fun NoteInput(
     allowGuitar: Boolean = true,
     guitarMarks: List<FretMark> = emptyList(),
     onUnreadable: () -> Unit = {},
+    hideKeyLabels: Boolean = false,
+    showStringNames: Boolean = true,
 ) {
     val effective = if (mode == InputMode.GUITAR && !allowGuitar) InputMode.KEYS else mode
     Column(modifier.fillMaxWidth()) {
@@ -83,13 +85,14 @@ fun NoteInput(
         when (effective) {
             InputMode.TEXT -> TextNoteInput(notation, state, onNote, onContinue, onUnreadable)
             InputMode.KEYS -> ContinueOr(state, onContinue, KEY_HEIGHT * 2 + KEY_GAP) {
-                PianoKeys(notation, enabled = state == InputState.ACCEPTING) { onNote(EnteredNote(it)) }
+                PianoKeys(notation, enabled = state == InputState.ACCEPTING, hideLabels = hideKeyLabels) { onNote(EnteredNote(it)) }
             }
             InputMode.GUITAR -> ContinueOr(state, onContinue, GUITAR_KEYS_HEIGHT) {
                 GuitarKeys(
                     notation = notation,
                     enabled = state == InputState.ACCEPTING,
                     marks = guitarMarks,
+                    showStringNames = showStringNames,
                     onTap = { onNote(EnteredNote(Guitar.pitchAt(it), position = it)) },
                 )
             }
@@ -204,20 +207,20 @@ private val KEY_GAP = 6.dp
  * Weights are in units of one white key (7 in total per row).
  */
 @Composable
-private fun PianoKeys(notation: Notation, enabled: Boolean, onNote: (PitchClass) -> Unit) {
+private fun PianoKeys(notation: Notation, enabled: Boolean, hideLabels: Boolean, onNote: (PitchClass) -> Unit) {
     val whites = listOf(0, 2, 4, 5, 7, 9, 11).map(PitchClass::of)
     Column(Modifier.alpha(if (enabled) 1f else 0.5f), verticalArrangement = Arrangement.spacedBy(KEY_GAP)) {
         Row(Modifier.fillMaxWidth().height(KEY_HEIGHT)) {
             Gap(0.55f)
-            BlackKey(1, notation, enabled, onNote)
+            BlackKey(1, notation, enabled, hideLabels, onNote)
             Gap(0.1f)
-            BlackKey(3, notation, enabled, onNote)
+            BlackKey(3, notation, enabled, hideLabels, onNote)
             Gap(1.1f)
-            BlackKey(6, notation, enabled, onNote)
+            BlackKey(6, notation, enabled, hideLabels, onNote)
             Gap(0.1f)
-            BlackKey(8, notation, enabled, onNote)
+            BlackKey(8, notation, enabled, hideLabels, onNote)
             Gap(0.1f)
-            BlackKey(10, notation, enabled, onNote)
+            BlackKey(10, notation, enabled, hideLabels, onNote)
             Gap(0.55f)
         }
         Row(Modifier.fillMaxWidth().height(KEY_HEIGHT), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -229,11 +232,13 @@ private fun PianoKeys(notation: Notation, enabled: Boolean, onNote: (PitchClass)
                     contentColor = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(
-                        NoteNames.name(pitch, notation, Spelling.SHARP),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
+                    if (!hideLabels) {
+                        Text(
+                            NoteNames.name(pitch, notation, Spelling.SHARP),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
         }
@@ -244,7 +249,7 @@ private fun PianoKeys(notation: Notation, enabled: Boolean, onNote: (PitchClass)
 private fun RowScope.Gap(weight: Float) = Spacer(Modifier.weight(weight))
 
 @Composable
-private fun RowScope.BlackKey(semitone: Int, notation: Notation, enabled: Boolean, onNote: (PitchClass) -> Unit) {
+private fun RowScope.BlackKey(semitone: Int, notation: Notation, enabled: Boolean, hideLabels: Boolean, onNote: (PitchClass) -> Unit) {
     val pitch = PitchClass.of(semitone)
     Key(
         onClick = { onNote(pitch) },
@@ -254,9 +259,11 @@ private fun RowScope.BlackKey(semitone: Int, notation: Notation, enabled: Boolea
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.weight(0.9f),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(NoteNames.name(pitch, notation, Spelling.SHARP), style = MaterialTheme.typography.titleSmall)
-            Text(NoteNames.name(pitch, notation, Spelling.FLAT), style = MaterialTheme.typography.labelSmall)
+        if (!hideLabels) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(NoteNames.name(pitch, notation, Spelling.SHARP), style = MaterialTheme.typography.titleSmall)
+                Text(NoteNames.name(pitch, notation, Spelling.FLAT), style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }

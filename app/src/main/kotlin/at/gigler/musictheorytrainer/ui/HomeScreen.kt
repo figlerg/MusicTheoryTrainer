@@ -18,27 +18,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import at.gigler.musictheorytrainer.data.Category
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Score
 
 @Composable
-fun HomeScreen(scores: Map<Exercise, Score>, onOpen: (Exercise) -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(
+    scores: Map<Exercise, Score>,
+    onOpen: (Category) -> Unit,
+    onSettings: () -> Unit,
+) {
     ScreenScaffold(title = "Musiktheorie", onBack = null) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Spacer(Modifier.height(4.dp))
-            for (exercise in Exercise.entries) {
-                ExerciseCard(exercise.title, scores[exercise] ?: Score(), onClick = { onOpen(exercise) })
+            for (category in Category.entries) {
+                val score = Exercise.of(category).fold(Score()) { sum, exercise -> sum + (scores[exercise] ?: Score()) }
+                ScoreCard(
+                    title = category.title,
+                    subtitle = if (score.total == 0) category.hint else "${score.correct} von ${score.total} richtig",
+                    score = score,
+                    onClick = { onOpen(category) },
+                )
                 Spacer(Modifier.height(10.dp))
             }
         }
         OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(56.dp)) {
-            Text("Einstellungen")
+            Text("Einstellungen und Statistik")
         }
     }
 }
 
+/** Card with a title, one line of context and the hit rate on the right. */
 @Composable
-private fun ExerciseCard(title: String, score: Score, onClick: () -> Unit) {
+fun ScoreCard(title: String, subtitle: String, score: Score, onClick: () -> Unit) {
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 88.dp).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -47,7 +59,7 @@ private fun ExerciseCard(title: String, score: Score, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleLarge)
                 Text(
-                    if (score.total == 0) "noch keine Versuche" else "${score.correct} von ${score.total} richtig",
+                    subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

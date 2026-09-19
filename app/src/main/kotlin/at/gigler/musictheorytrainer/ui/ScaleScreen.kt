@@ -60,7 +60,7 @@ fun ScaleScreen(
     updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ScreenScaffold(Exercise.SCALE.title, onBack) {
+    ExerciseScaffold(Exercise.SCALE, settings, updateSettings, onBack) {
         val notation = settings.notation
         var current by remember(settings.keyChoice, settings.keyOrder) {
             mutableStateOf(KeyQuiz.next(settings.keyChoice, settings.keyOrder, Random))
@@ -118,6 +118,7 @@ fun ScaleScreen(
             NoteInput(
                 notation = notation,
                 mode = settings.inputMode,
+                hideKeyLabels = settings.hideKeyLabels,
                 onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
                 state = InputState.ACCEPTING,
                 onNote = { entered ->
@@ -250,7 +251,7 @@ private fun ColumnScope.ScaleResult(
     val notation = settings.notation
     val key = drill.key
     var string by remember(drill) {
-        mutableIntStateOf(Guitar.lowestRootString(key.root.pitchClass, settings.stringSet.strings))
+        mutableIntStateOf(Guitar.lowestRootString(key.root.pitchClass, settings.stringList))
     }
     val positions = Guitar.scaleOnString(key.root.pitchClass, string, key.type)
     val names = drill.scale + drill.root

@@ -1,0 +1,22 @@
+package at.gigler.musictheorytrainer.data
+
+/** The four areas on the home screen. */
+enum class Category(val title: String, val hint: String) {
+    HEAR("Hören", "Intervalle und Akkorde am Klang erkennen"),
+    NOTES("Noten", "Vom Blatt lesen"),
+    FRETBOARD("Griffbrett", "Töne und Griffe auf der Gitarre"),
+    THEORY("Theorie", "Rechnen und bauen"),
+}
+
+enum class Exercise(val category: Category, val title: String, val hint: String) {
+    FRETBOARD(Category.FRETBOARD, "Griffbrett-Töne", "Ton nennen oder Stelle finden"),
+    CHORDS(Category.FRETBOARD, "Akkorde", "Dreiklänge aus Tönen oder als Griff"),
+    SHEET(Category.NOTES, "Notenlesen", "Noten im Violinschlüssel benennen"),
+    INTERVALS(Category.THEORY, "Intervalle", "Halbtöne auf- und abwärts rechnen"),
+    SCALE(Category.THEORY, "Tonleitern", "Dur und Moll Ton für Ton bauen"),
+    ;
+
+    companion object {
+        fun of(category: Category): List<Exercise> = entries.filter { it.category == category }
+    }
+}

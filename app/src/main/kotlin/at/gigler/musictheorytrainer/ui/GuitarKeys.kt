@@ -45,6 +45,7 @@ fun GuitarKeys(
     onTap: (FretPosition) -> Unit,
     modifier: Modifier = Modifier,
     lastFret: Int = GUITAR_KEYS_LAST_FRET,
+    showStringNames: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     val feedback = LocalFeedbackColors.current
@@ -79,12 +80,14 @@ fun GuitarKeys(
         for (string in 0 until Guitar.STRING_COUNT) {
             val y = g.rowCenter(string)
             drawLine(colors.onSurfaceVariant, Offset(g.left, y), Offset(g.right, y), (2.6f - string * 0.3f).dp.toPx())
-            drawCentered(
-                measurer,
-                Guitar.stringName(string, notation),
-                Offset(g.left / 2, y),
-                small.copy(color = colors.onSurface, fontWeight = FontWeight.Bold),
-            )
+            if (showStringNames) {
+                drawCentered(
+                    measurer,
+                    Guitar.stringName(string, notation),
+                    Offset(g.left / 2, y),
+                    small.copy(color = colors.onSurface, fontWeight = FontWeight.Bold),
+                )
+            }
         }
         val radius = min(g.unit * 0.7f, g.rowHeight) * 0.46f
         for (mark in marks) {

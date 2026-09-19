@@ -29,7 +29,7 @@ fun IntervalScreen(
     updateSettings: ((Settings) -> Settings) -> Unit,
     onBack: () -> Unit,
 ) {
-    ScreenScaffold(Exercise.INTERVALS.title, onBack) {
+    ExerciseScaffold(Exercise.INTERVALS, settings, updateSettings, onBack) {
         val notation = settings.notation
         val difficulty = settings.intervalDifficulty
         var question by remember(difficulty) { mutableStateOf(IntervalQuiz.next(difficulty, Random)) }
@@ -64,6 +64,7 @@ fun IntervalScreen(
         NoteInput(
             notation = notation,
             mode = settings.inputMode,
+            hideKeyLabels = settings.hideKeyLabels,
             onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
             state = state.inputState,
             onNote = { entered ->
