@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -174,4 +177,50 @@ fun TabText(tab: String, modifier: Modifier = Modifier) {
         softWrap = false,
         modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp),
     )
+}
+
+/** Answer buttons for exercises whose answer is one of a few names. */
+@Composable
+fun ChoiceGrid(
+    labels: List<String>,
+    onPick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    columns: Int = 2,
+    enabled: Boolean = true,
+    verdictOf: (Int) -> Verdict? = { null },
+) {
+    val feedback = LocalFeedbackColors.current
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        labels.chunked(columns).forEachIndexed { row, chunk ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                chunk.forEachIndexed { column, label ->
+                    val index = row * columns + column
+                    val colors = when (verdictOf(index)) {
+                        Verdict.CORRECT -> ButtonDefaults.buttonColors(
+                            containerColor = feedback.correct,
+                            contentColor = feedback.onCorrect,
+                        )
+                        Verdict.UNUSUAL -> ButtonDefaults.buttonColors(
+                            containerColor = feedback.unusual,
+                            contentColor = feedback.onUnusual,
+                        )
+                        Verdict.WRONG -> ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError,
+                        )
+                        null -> ButtonDefaults.filledTonalButtonColors()
+                    }
+                    Button(
+                        onClick = { onPick(index) },
+                        enabled = enabled || verdictOf(index) != null,
+                        colors = colors,
+                        modifier = Modifier.weight(1f).height(56.dp),
+                    ) {
+                        Text(label, maxLines = 2, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                repeat(columns - chunk.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
 }

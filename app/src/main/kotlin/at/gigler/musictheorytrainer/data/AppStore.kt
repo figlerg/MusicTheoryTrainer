@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import at.gigler.musictheorytrainer.audio.Voice
+import at.gigler.musictheorytrainer.theory.EarIntervalSet
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
@@ -41,6 +42,9 @@ data class Settings(
     val sheetExactOctave: Boolean = true,
     val hideStringNames: Boolean = false,
     val hideKeyLabels: Boolean = false,
+    val earIntervalSet: EarIntervalSet = EarIntervalSet.EASY,
+    val earHarmonic: Boolean = false,
+    val earReference: Boolean = true,
 ) {
     /** Always at least one string, low to high. */
     val stringList: List<Int> get() = strings.sorted().ifEmpty { listOf(0) }
@@ -85,6 +89,9 @@ class AppStore(context: Context) {
             prefs[SHEET_EXACT_OCTAVE] = s.sheetExactOctave
             prefs[HIDE_STRING_NAMES] = s.hideStringNames
             prefs[HIDE_KEY_LABELS] = s.hideKeyLabels
+            prefs[EAR_INTERVAL_SET] = s.earIntervalSet.name
+            prefs[EAR_HARMONIC] = s.earHarmonic
+            prefs[EAR_REFERENCE] = s.earReference
         }
     }
 
@@ -130,6 +137,9 @@ class AppStore(context: Context) {
             sheetExactOctave = this[SHEET_EXACT_OCTAVE] ?: d.sheetExactOctave,
             hideStringNames = this[HIDE_STRING_NAMES] ?: d.hideStringNames,
             hideKeyLabels = this[HIDE_KEY_LABELS] ?: d.hideKeyLabels,
+            earIntervalSet = enumOr(this[EAR_INTERVAL_SET], d.earIntervalSet),
+            earHarmonic = this[EAR_HARMONIC] ?: d.earHarmonic,
+            earReference = this[EAR_REFERENCE] ?: d.earReference,
         )
     }
 
@@ -153,6 +163,9 @@ class AppStore(context: Context) {
         val HIDE_STRING_NAMES = booleanPreferencesKey("hide_string_names")
         val HIDE_KEY_LABELS = booleanPreferencesKey("hide_key_labels")
         val PERIOD_START = longPreferencesKey("period_start")
+        val EAR_INTERVAL_SET = stringPreferencesKey("ear_interval_set")
+        val EAR_HARMONIC = booleanPreferencesKey("ear_harmonic")
+        val EAR_REFERENCE = booleanPreferencesKey("ear_reference")
 
         fun correctKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_correct")
         fun totalKey(exercise: Exercise) = intPreferencesKey("score_${exercise.name.lowercase()}_total")

@@ -114,6 +114,8 @@ fun App(store: AppStore, player: TonePlayer) {
                 )
 
                 else -> when (val exercise = Exercise.valueOf(s.removePrefix(EXERCISE_PREFIX))) {
+                    Exercise.EAR_INTERVAL, Exercise.EAR_QUALITY, Exercise.EAR_CHORD, Exercise.EAR_PITCH ->
+                        EarScreen(exercise, current, sound, record(exercise), update, up)
                     Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, up)
                     Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, up)
                     Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)

@@ -1,6 +1,7 @@
 package at.gigler.musictheorytrainer.data
 
 import at.gigler.musictheorytrainer.audio.Voice
+import at.gigler.musictheorytrainer.theory.EarIntervalSet
 import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
@@ -164,6 +165,29 @@ object Options {
         set = { s, v -> s.copy(hideKeyLabels = v) },
     )
 
+    val earIntervalSet = choice(
+        "Intervalle",
+        hint = "Welche Abstände abgefragt werden.",
+        values = EarIntervalSet.entries,
+        labels = EarIntervalSet.entries.map { it.label },
+        get = { it.earIntervalSet },
+        set = { s, v -> s.copy(earIntervalSet = v) },
+    )
+
+    val earHarmonic = Option.Switch(
+        "Gleichzeitig spielen",
+        hint = "Aus: die Töne kommen nacheinander, was am Anfang leichter ist.",
+        checked = { it.earHarmonic },
+        set = { s, v -> s.copy(earHarmonic = v) },
+    )
+
+    val earReference = Option.Switch(
+        "Bezugston zuerst",
+        hint = "Spielt erst ein C, dann den gesuchten Ton. Ohne Bezugston ist es absolutes Gehör, und das ist als Erwachsener kaum noch erlernbar.",
+        checked = { it.earReference },
+        set = { s, v -> s.copy(earReference = v) },
+    )
+
     /** Shown in every exercise, below its own options. */
     val general: List<Option> = listOf(notation, inputMode, sound, voice)
 
@@ -173,5 +197,8 @@ object Options {
         Exercise.SHEET -> listOf(sheetRange, sheetExactOctave, hideStringNames, hideKeyLabels)
         Exercise.INTERVALS -> listOf(intervalDifficulty, hideKeyLabels)
         Exercise.SCALE -> listOf(keyChoice, keyOrder, showTab, hideKeyLabels)
+        Exercise.EAR_INTERVAL -> listOf(earIntervalSet, earHarmonic)
+        Exercise.EAR_QUALITY, Exercise.EAR_CHORD -> listOf(earHarmonic)
+        Exercise.EAR_PITCH -> listOf(earReference, hideKeyLabels)
     }
 }

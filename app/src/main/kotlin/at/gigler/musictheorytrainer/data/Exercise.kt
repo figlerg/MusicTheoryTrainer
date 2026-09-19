@@ -14,6 +14,10 @@ enum class Exercise(val category: Category, val title: String, val hint: String)
     SHEET(Category.NOTES, "Notenlesen", "Noten im Violinschlüssel benennen"),
     INTERVALS(Category.THEORY, "Intervalle", "Halbtöne auf- und abwärts rechnen"),
     SCALE(Category.THEORY, "Tonleitern", "Dur und Moll Ton für Ton bauen"),
+    EAR_INTERVAL(Category.HEAR, "Intervalle hören", "Zwei Töne: welcher Abstand?"),
+    EAR_QUALITY(Category.HEAR, "Dur oder Moll", "Dreiklang hören und einordnen"),
+    EAR_CHORD(Category.HEAR, "Akkordtyp hören", "Dur, Moll, vermindert, übermäßig"),
+    EAR_PITCH(Category.HEAR, "Ton erraten", "Einen einzelnen Ton benennen"),
     ;
 
     companion object {
