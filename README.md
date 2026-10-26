@@ -131,7 +131,64 @@ keyAlias=mtt
 keyPassword=...
 ```
 
-Existiert die Datei, signiert `assembleRelease` automatisch damit.
+Existiert die Datei, signiert `assembleRelease` automatisch damit. Alternativ liest der Build die
+gleichen Werte aus den Umgebungsvariablen `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` und
+`KEY_PASSWORD` — so bekommt die CI den Schlüssel, ohne dass eine Datei im Repo liegt.
+
+## Bauen ohne PC (GitHub Actions)
+
+Zwei Workflows unter `.github/workflows/`:
+
+| Workflow | Läuft | Ergebnis |
+|---|---|---|
+| `build.yml` | bei jedem Push und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>` |
+| `screenshots.yml` | nur per Hand | Emulator, APK installieren, jeden Bildschirm fotografieren, Artefakt `screenshots-r<Nummer>` |
+
+### APK vom Handy holen
+
+1. Im Repo auf **Actions** → Workflow **Build** → den obersten Lauf öffnen.
+2. Unten unter **Artifacts** `apk-r<Nummer>` antippen. Es lädt eine ZIP-Datei.
+3. In **Eigene Dateien** die ZIP entpacken und die APK darin installieren (siehe
+   [Variante B](#variante-b-als-datei)).
+
+Der Dateiname enthält Version, Laufnummer und Commit, z. B. `musiktheorie-0.4.0-r12-a1b2c3d.apk`.
+
+### Signierschlüssel als Secret hinterlegen
+
+Ohne Secret signiert die CI mit dem Debug-Schlüssel. Dann lässt sich die APK nicht über eine
+vorhandene Installation legen, und Deinstallieren löscht die Statistik. Damit die CI-APKs echte
+Updates deiner App sind, einmal (an dem Rechner, auf dem `release.jks` liegt):
+
+```bash
+base64 -w0 release.jks > release.jks.b64    # macOS: base64 -i release.jks -o release.jks.b64
+```
+
+Dann im Repo unter **Settings → Secrets and variables → Actions → New repository secret** vier
+Secrets anlegen:
+
+| Name | Inhalt |
+|---|---|
+| `KEYSTORE_BASE64` | der komplette Inhalt von `release.jks.b64` |
+| `KEYSTORE_PASSWORD` | Passwort des Keystores |
+| `KEY_ALIAS` | Alias des Schlüssels, z. B. `mtt` |
+| `KEY_PASSWORD` | Passwort des Schlüssels (falls gleich, nochmal das Keystore-Passwort) |
+
+`release.jks.b64` danach löschen. Der Build-Log gibt den SHA-256-Fingerprint des Zertifikats aus:
+stimmt der mit dem deiner installierten App überein, installiert sich die APK als Update.
+
+### Screenshots
+
+**Actions** → **Screenshots** → **Run workflow**. Wählbar sind Farbschema (`dark`, `light`, `both`)
+und API-Level des Emulators. Der Lauf dauert gut 15 bis 25 Minuten.
+
+`tools/screenshots.py` steuert den Emulator über `adb`: es liest den Accessibility-Baum, tippt die
+Beschriftungen an und speichert nach jedem Schritt ein PNG. Die Liste der Bildschirme kommt aus
+`Exercise.kt`, neue Übungen landen also automatisch in den Screenshots. Das Skript läuft auch
+lokal gegen ein angeschlossenes Handy:
+
+```bash
+python3 tools/screenshots.py --apk app/build/outputs/apk/release/app-release.apk --out screenshots
+```
 
 ## Lizenz
 
