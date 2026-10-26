@@ -70,22 +70,31 @@ def dump() -> list[tuple[str, tuple[int, int], int]]:
     return sorted(nodes, key=lambda entry: entry[2])
 
 
-def find(label: str, nodes: list[tuple[str, tuple[int, int], int]]) -> tuple[int, int] | None:
+def find(
+    label: str,
+    nodes: list[tuple[str, tuple[int, int], int]],
+    exact: bool = False,
+) -> tuple[int, int] | None:
     """Centre of the node matching label, from the most to the least specific match.
 
     Compose merges a card into a single node, so its label reads like
     "Notenlesen, Noten benennen, 80 %". Matching a whole segment first keeps
-    "Notenlesen" from hitting "Notenlesen auf Zeit".
+    "Notenlesen" from hitting "Notenlesen auf Zeit". With exact, only whole
+    texts or whole segments count.
     """
     def segments(text: str) -> list[str]:
         return [part.strip() for part in re.split(r", |\n", text)]
 
-    for matches in (
+    matchers = [
         lambda text: text.strip() == label,
         lambda text: label in segments(text),
-        lambda text: text.strip().startswith(label),
-        lambda text: label in text,
-    ):
+    ]
+    if not exact:
+        matchers += [
+            lambda text: text.strip().startswith(label),
+            lambda text: label in text,
+        ]
+    for matches in matchers:
         # Nodes are sorted by area, so the first hit is the smallest, most specific one.
         for text, centre, _ in nodes:
             if matches(text):
@@ -117,9 +126,19 @@ def tap(label: str, timeout: float = 20.0) -> None:
     time.sleep(0.6)
 
 
-def back() -> None:
-    adb("shell", "input", "keyevent", "KEYCODE_BACK")
-    time.sleep(0.8)
+def back_until(label: str, attempts: int = 3) -> None:
+    """Press back until label shows up.
+
+    One press per level is not enough: an open soft keyboard takes the first
+    press for itself and the screen stays where it is.
+    """
+    for _ in range(attempts):
+        adb("shell", "input", "keyevent", "KEYCODE_BACK")
+        time.sleep(0.8)
+        if find(label, dump(), exact=True):
+            return
+    visible = " | ".join(sorted({text for text, _, _ in dump()}))
+    sys.exit(f'Nach {attempts}x Zurück kein "{label}" zu sehen. Sichtbar war: {visible}')
 
 
 def shot(out: Path, name: str) -> None:
@@ -155,15 +174,14 @@ def capture(out: Path, prefix: str, screens: list[tuple[str, list[str]]]) -> Non
         for exercise in exercises:
             tap(exercise)
             shot(out, numbered(exercise))
-            back()
-        back()
+            # Another exercise's title only appears on the category screen, never on this one.
+            back_until(next((title for title in exercises if title != exercise), category))
+        back_until(SETTINGS_LABEL)
 
     tap(SETTINGS_LABEL)
     shot(out, numbered("einstellungen"))
     tap(STATS_LABEL)
     shot(out, numbered("statistik"))
-    back()
-    back()
 
 
 def main() -> None:
