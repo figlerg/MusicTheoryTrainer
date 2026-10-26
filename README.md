@@ -169,9 +169,9 @@ Secrets anlegen:
 | Name | Inhalt |
 |---|---|
 | `KEYSTORE_BASE64` | der komplette Inhalt von `release.jks.b64` |
-| `KEYSTORE_PASSWORD` | Passwort des Keystores |
-| `KEY_ALIAS` | Alias des Schlüssels, z. B. `mtt` |
-| `KEY_PASSWORD` | Passwort des Schlüssels (falls gleich, nochmal das Keystore-Passwort) |
+| `STOREPASSWORD` | Passwort des Keystores (`storePassword`) |
+| `KEYALIAS` | Alias des Schlüssels (`keyAlias`), z. B. `mtt` |
+| `KEYPASSWORD` | Passwort des Schlüssels (`keyPassword`) |
 
 `release.jks.b64` danach löschen. Der Build-Log gibt den SHA-256-Fingerprint des Zertifikats aus:
 stimmt der mit dem deiner installierten App überein, installiert sich die APK als Update.
