@@ -42,12 +42,25 @@ jobs:
       - name: Signierschlüssel auspacken
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
             echo "::warning::Kein Secret KEYSTORE_BASE64, die APK wird mit dem Debug-Schlüssel signiert."
             exit 0
           fi
+          # Half a configuration would otherwise surface as an unrelated Gradle error.
+          missing=""
+          [ -n "$KEYSTORE_PASSWORD" ] || missing="$missing KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ] || missing="$missing KEY_ALIAS"
+          if [ -n "$missing" ]; then
+            echo "::error::KEYSTORE_BASE64 ist gesetzt, aber diese Secrets fehlen oder sind leer:$missing"
+            exit 1
+          fi
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > release.jks
+          # Opening the key here names a wrong password or alias directly.
+          keytool -list -keystore release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null \
+            || { echo "::error::Keystore lässt sich mit KEYSTORE_PASSWORD und KEY_ALIAS nicht öffnen."; exit 1; }
           echo "KEYSTORE_FILE=release.jks" >> "$GITHUB_ENV"
 
       - name: Unit-Tests
