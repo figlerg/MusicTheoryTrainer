@@ -25,7 +25,6 @@ import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
 import at.gigler.musictheorytrainer.theory.Answer
-import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.SheetQuiz
 import at.gigler.musictheorytrainer.theory.StaffNote
 import kotlinx.coroutines.delay
@@ -57,7 +56,7 @@ fun SpeedSheetScreen(
         var remaining by remember { mutableIntStateOf(settings.speedSeconds) }
 
         fun start() {
-            notes = SheetQuiz.randomLine(settings.sheetRange, Random, length = RUN_NOTES)
+            notes = SheetQuiz.randomLine(settings.effectiveSheetRange, Random, length = RUN_NOTES)
             results = emptyList()
             hits = 0
             remaining = settings.speedSeconds
@@ -109,6 +108,7 @@ fun SpeedSheetScreen(
                 NoteInput(
                     notation = settings.notation,
                     mode = settings.inputMode,
+                    allowRecorder = true,
                     hideKeyLabels = settings.hideKeyLabels,
                     showStringNames = !settings.hideStringNames,
                     onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
@@ -116,9 +116,7 @@ fun SpeedSheetScreen(
                     onNote = { entered ->
                         val note = notes[results.size]
                         val judgement = Answer.judge(entered, note.pitchClass, settings.notation)
-                        val position = entered.position
-                        val wrongOctave = settings.sheetExactOctave && position != null &&
-                            judgement.result.isHit && Guitar.midiAt(position) != note.guitarMidi
+                        val wrongOctave = judgement.result.isHit && entered.missesOctaveOf(note, settings.sheetExactOctave)
                         val hit = judgement.result.isHit && !wrongOctave
                         if (hit) hits++
                         results = results + if (hit) Verdict.CORRECT else Verdict.WRONG

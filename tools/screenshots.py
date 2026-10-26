@@ -24,6 +24,8 @@ ACTIVITY = f"{PACKAGE}/.MainActivity"
 EXERCISE_KT = Path("app/src/main/kotlin/at/gigler/musictheorytrainer/data/Exercise.kt")
 SETTINGS_LABEL = "Einstellungen und Statistik"
 STATS_LABEL = "Statistik und Übungszeit"
+KNOWLEDGE_LABEL = "Grundwissen"
+KNOWLEDGE_TABS = ["Klavier", "Gitarre"]
 
 
 def adb(*args: str) -> str:
@@ -155,6 +157,10 @@ def slug(text: str) -> str:
 # --- the tour -----------------------------------------------------------------------
 
 
+def screens_in(screens: list[tuple[str, list[str]]], category: str) -> list[str]:
+    return next(exercises for title, exercises in screens if title == category)
+
+
 def capture(out: Path, prefix: str, screens: list[tuple[str, list[str]]]) -> None:
     adb("shell", "am", "force-stop", PACKAGE)
     adb("shell", "am", "start", "-n", ACTIVITY)
@@ -182,6 +188,24 @@ def capture(out: Path, prefix: str, screens: list[tuple[str, list[str]]]) -> Non
     shot(out, numbered("einstellungen"))
     tap(STATS_LABEL)
     shot(out, numbered("statistik"))
+    back_until(SETTINGS_LABEL)
+
+    tap(KNOWLEDGE_LABEL)
+    shot(out, numbered("grundwissen-blockfloete"))
+    for tab in KNOWLEDGE_TABS:
+        tap(tab)
+        shot(out, numbered(f"grundwissen-{tab}"))
+    back_until(SETTINGS_LABEL)
+
+    # The recorder input only shows up after switching to it, which the tour above never does.
+    category_of = {exercise: category for category, exercises in screens for exercise in exercises}
+    for exercise, switch in (("Flötengriffe", "Ton greifen"), ("Notenlesen", "Flöte")):
+        tap(category_of[exercise])
+        tap(exercise)
+        tap(switch)
+        shot(out, numbered(f"{exercise}-{switch}"))
+        back_until(next(title for title in screens_in(screens, category_of[exercise]) if title != exercise))
+        back_until(SETTINGS_LABEL)
 
 
 def main() -> None:

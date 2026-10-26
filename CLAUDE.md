@@ -6,8 +6,11 @@ aus, ohne PC.
 
 ## Konventionen
 
-- Texte in der App auf Deutsch. Keine Erklär- oder Tutorialtexte, die Theorie lernt der Nutzer
-  woanders.
+- Texte in der App auf Deutsch. Keine Erklär- oder Tutorialtexte in den Übungen, die Theorie
+  lernt der Nutzer woanders. Einzige Ausnahme sind die Grundwissen-Seiten (`KnowledgeScreen.kt`):
+  nur gesichertes Standardwissen für Einsteiger, nichts Spekulatives.
+- Die Flöte kennt nur die Griffe in `Recorder.kt`. Neue Griffe nur eintragen, wenn sie
+  Standard sind; Flöten-Eingabe gibt es nur in Übungen, deren Fragen alle greifbar sind.
 - Code-Kommentare und Commit-Nachrichten auf Englisch.
 - Das Repo ist öffentlich: keine persönlichen Angaben (Arbeitgeber, Rechnernamen, private
   Mailadressen). Commits laufen über `40119252+figlerg@users.noreply.github.com`.

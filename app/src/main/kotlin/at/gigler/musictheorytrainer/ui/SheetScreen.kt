@@ -46,9 +46,9 @@ import at.gigler.musictheorytrainer.theory.StaffRange
 import kotlin.random.Random
 
 private data class SheetLine(val notes: List<StaffNote>, val melody: Melody?) {
-    /** Guitar pitch and length in seconds: the melody's own rhythm, random lines in even quarters. */
-    fun timed(): List<Pair<Int, Double>> =
-        notes.mapIndexed { i, note -> note.guitarMidi to (melody?.seconds?.get(i) ?: RANDOM_NOTE_SECONDS) }
+    /** Sounding pitch and length in seconds: the melody's own rhythm, random lines in even quarters. */
+    fun timed(sound: Sound): List<Pair<Int, Double>> =
+        notes.mapIndexed { i, note -> sound.soundingOf(note.writtenMidi) to (melody?.seconds?.get(i) ?: RANDOM_NOTE_SECONDS) }
 }
 
 private const val RANDOM_NOTE_SECONDS = 0.6
@@ -74,8 +74,8 @@ fun SheetScreen(
             { if (it == SheetSource.MELODIES) "Melodien" else "Zufall" },
             { source -> updateSettings { it.copy(sheetSource = source) } },
         )
-        var line by remember(settings.sheetSource, settings.sheetRange) {
-            mutableStateOf(newLine(settings.sheetSource, settings.sheetRange, null))
+        var line by remember(settings.sheetSource, settings.effectiveSheetRange) {
+            mutableStateOf(newLine(settings.sheetSource, settings.effectiveSheetRange, null))
         }
         var results by remember(line) { mutableStateOf(emptyList<Verdict>()) }
         var counted by remember(line) { mutableIntStateOf(-1) }
@@ -130,7 +130,7 @@ fun SheetScreen(
                     onSolution = {
                         countFirst(Verdict.WRONG)
                         message = "Lösung: ${line.notes[results.size].name(notation)}" to null
-                        sound.play(line.notes[results.size].guitarMidi)
+                        sound.play(sound.soundingOf(line.notes[results.size].writtenMidi))
                         advance()
                     },
                     onExplain = {
@@ -142,6 +142,7 @@ fun SheetScreen(
             NoteInput(
                 notation = notation,
                 mode = settings.inputMode,
+                allowRecorder = true,
                 hideKeyLabels = settings.hideKeyLabels,
                 showStringNames = !settings.hideStringNames,
                 onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },
@@ -149,9 +150,7 @@ fun SheetScreen(
                 onNote = { entered ->
                     val judgement = Answer.judge(entered, line.notes[results.size].pitchClass, notation)
                     var verdict = Verdict.of(judgement.result) ?: return@NoteInput
-                    val position = entered.position
-                    val wrongOctave = settings.sheetExactOctave && position != null && verdict.isHit &&
-                        Guitar.midiAt(position) != line.notes[results.size].guitarMidi
+                    val wrongOctave = verdict.isHit && entered.missesOctaveOf(line.notes[results.size], settings.sheetExactOctave)
                     if (wrongOctave) verdict = Verdict.WRONG
                     countFirst(verdict)
                     if (verdict.isHit) {
@@ -159,7 +158,7 @@ fun SheetScreen(
                             if (verdict == Verdict.CORRECT) "Richtig: ${line.notes[results.size].name(notation)}"
                             else "Richtig (üblich: ${judgement.usualName})"
                             ) to verdict
-                        sound.play(line.notes[results.size].guitarMidi)
+                        sound.play(sound.soundingOf(line.notes[results.size].writtenMidi))
                         advance()
                     } else {
                         wrong = entered
@@ -184,10 +183,10 @@ fun SheetScreen(
             )
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (sound.enabled) {
-                    PlayStopButton(sound) { sound.playTimed(line.timed()) }
+                    PlayStopButton(sound) { sound.playTimed(line.timed(sound)) }
                 }
                 Button(
-                    onClick = { line = newLine(settings.sheetSource, settings.sheetRange, line) },
+                    onClick = { line = newLine(settings.sheetSource, settings.effectiveSheetRange, line) },
                     modifier = Modifier.weight(1f).height(56.dp),
                 ) { Text(if (line.melody != null) "Nächste Melodie" else "Nächste Zeile") }
             }

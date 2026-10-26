@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,10 +35,12 @@ import java.io.File
 
 /**
  * Screens are addressed by a small string so they survive process death: null is the home screen,
- * "CAT:<name>" a category, "EX:<name>" an exercise, [SETTINGS_SCREEN] the settings.
+ * "CAT:<name>" a category, "EX:<name>" an exercise, [SETTINGS_SCREEN] the settings and
+ * [KNOWLEDGE_SCREEN] the basics pages.
  */
 private const val SETTINGS_SCREEN = "SETTINGS"
 private const val STATS_SCREEN = "STATS"
+private const val KNOWLEDGE_SCREEN = "KNOWLEDGE"
 private const val CATEGORY_PREFIX = "CAT:"
 private const val EXERCISE_PREFIX = "EX:"
 
@@ -90,64 +93,71 @@ fun App(store: AppStore, player: TonePlayer) {
         }
         val update: ((Settings) -> Settings) -> Unit = { transform -> scope.launch { store.updateSettings(transform) } }
 
-        Box(Modifier.safeDrawingPadding()) {
-            val s = screen
-            when {
-                s == null -> HomeScreen(
-                    scores = scores,
-                    onOpen = { screen = CATEGORY_PREFIX + it.name },
-                    onSettings = { screen = SETTINGS_SCREEN },
-                )
+        CompositionLocalProvider(LocalRecorderSystem provides current.recorderSystem) {
+            Box(Modifier.safeDrawingPadding()) {
+                val s = screen
+                when {
+                    s == null -> HomeScreen(
+                        scores = scores,
+                        onOpen = { screen = CATEGORY_PREFIX + it.name },
+                        onKnowledge = { screen = KNOWLEDGE_SCREEN },
+                        onSettings = { screen = SETTINGS_SCREEN },
+                    )
 
-                s == SETTINGS_SCREEN -> SettingsScreen(
-                    settings = current,
-                    onChange = update,
-                    onStats = { screen = STATS_SCREEN },
-                    onBack = up,
-                )
-
-                s == STATS_SCREEN -> StatsScreen(
-                    log = log,
-                    periodStart = periodStart,
-                    onResetPeriod = { scope.launch { store.resetScores() } },
-                    onBack = { screen = SETTINGS_SCREEN },
-                )
-
-                s.startsWith(CATEGORY_PREFIX) -> CategoryScreen(
-                    category = Category.valueOf(s.removePrefix(CATEGORY_PREFIX)),
-                    scores = scores,
-                    onOpen = { screen = EXERCISE_PREFIX + it.name },
-                    onBack = up,
-                )
-
-                else -> when (val exercise = Exercise.valueOf(s.removePrefix(EXERCISE_PREFIX))) {
-                    Exercise.EAR_INTERVAL, Exercise.EAR_QUALITY, Exercise.EAR_CHORD, Exercise.EAR_PITCH ->
-                        EarScreen(exercise, current, sound, record(exercise), update, up)
-                    Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, up)
-                    Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, up)
-                    Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)
-                    Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, up)
-                    Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, up)
-                    Exercise.SHEET_RHYTHM -> RhythmSheetScreen(
+                    s == SETTINGS_SCREEN -> SettingsScreen(
                         settings = current,
-                        sound = sound,
-                        onResult = record(exercise),
-                        updateSettings = update,
-                        best = rhythmBest,
-                        bestLabel = variantLabel(Exercise.SHEET_RHYTHM, current),
-                        onBest = { score -> scope.launch { store.recordBest(rhythmVariant, score) } },
+                        onChange = update,
+                        onStats = { screen = STATS_SCREEN },
                         onBack = up,
                     )
-                    Exercise.SHEET_SPEED -> SpeedSheetScreen(
-                        settings = current,
-                        sound = sound,
-                        onResult = record(exercise),
-                        updateSettings = update,
-                        best = speedBest,
-                        bestLabel = variantLabel(Exercise.SHEET_SPEED, current),
-                        onBest = { score -> scope.launch { store.recordBest(speedVariant, score) } },
+
+                    s == KNOWLEDGE_SCREEN -> KnowledgeScreen(current, onBack = up)
+
+                    s == STATS_SCREEN -> StatsScreen(
+                        log = log,
+                        periodStart = periodStart,
+                        onResetPeriod = { scope.launch { store.resetScores() } },
+                        onBack = { screen = SETTINGS_SCREEN },
+                    )
+
+                    s.startsWith(CATEGORY_PREFIX) -> CategoryScreen(
+                        category = Category.valueOf(s.removePrefix(CATEGORY_PREFIX)),
+                        scores = scores,
+                        onOpen = { screen = EXERCISE_PREFIX + it.name },
                         onBack = up,
                     )
+
+                    else -> when (val exercise = Exercise.valueOf(s.removePrefix(EXERCISE_PREFIX))) {
+                        Exercise.EAR_INTERVAL, Exercise.EAR_QUALITY, Exercise.EAR_CHORD, Exercise.EAR_PITCH ->
+                            EarScreen(exercise, current, sound, record(exercise), update, up)
+                        Exercise.FRETBOARD -> FretboardScreen(current, sound, record(exercise), update, up)
+                        Exercise.INTERVALS -> IntervalScreen(current, sound, record(exercise), update, up)
+                        Exercise.SCALE -> ScaleScreen(current, sound, record(exercise), update, up)
+                        Exercise.CHORDS -> ChordScreen(current, sound, record(exercise), update, up)
+                        Exercise.PIANO -> PianoScreen(current, sound, record(exercise), update, up)
+                        Exercise.RECORDER -> RecorderScreen(current, sound, record(exercise), update, up)
+                        Exercise.SHEET -> SheetScreen(current, sound, record(exercise), update, up)
+                        Exercise.SHEET_RHYTHM -> RhythmSheetScreen(
+                            settings = current,
+                            sound = sound,
+                            onResult = record(exercise),
+                            updateSettings = update,
+                            best = rhythmBest,
+                            bestLabel = variantLabel(Exercise.SHEET_RHYTHM, current),
+                            onBest = { score -> scope.launch { store.recordBest(rhythmVariant, score) } },
+                            onBack = up,
+                        )
+                        Exercise.SHEET_SPEED -> SpeedSheetScreen(
+                            settings = current,
+                            sound = sound,
+                            onResult = record(exercise),
+                            updateSettings = update,
+                            best = speedBest,
+                            bestLabel = variantLabel(Exercise.SHEET_SPEED, current),
+                            onBest = { score -> scope.launch { store.recordBest(speedVariant, score) } },
+                            onBack = up,
+                        )
+                    }
                 }
             }
         }

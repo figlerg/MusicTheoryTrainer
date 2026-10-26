@@ -26,6 +26,7 @@ import at.gigler.musictheorytrainer.data.Score
 fun HomeScreen(
     scores: Map<Exercise, Score>,
     onOpen: (Category) -> Unit,
+    onKnowledge: () -> Unit,
     onSettings: () -> Unit,
 ) {
     ScreenScaffold(title = "Musiktheorie", onBack = null) {
@@ -40,6 +41,16 @@ fun HomeScreen(
                     onClick = { onOpen(category) },
                 )
                 Spacer(Modifier.height(10.dp))
+            }
+            Card(onClick = onKnowledge, modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    Text("Grundwissen", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "Blockflöte, Klavier, Gitarre zum Nachlesen",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         OutlinedButton(onClick = onSettings, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).height(56.dp)) {

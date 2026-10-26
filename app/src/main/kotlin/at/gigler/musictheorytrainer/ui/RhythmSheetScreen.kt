@@ -24,7 +24,6 @@ import at.gigler.musictheorytrainer.audio.Sound
 import at.gigler.musictheorytrainer.data.Exercise
 import at.gigler.musictheorytrainer.data.Settings
 import at.gigler.musictheorytrainer.theory.Answer
-import at.gigler.musictheorytrainer.theory.Guitar
 import at.gigler.musictheorytrainer.theory.RhythmNote
 import at.gigler.musictheorytrainer.theory.RhythmQuiz
 import at.gigler.musictheorytrainer.theory.Timing
@@ -80,7 +79,7 @@ fun RhythmSheetScreen(
 
         fun start() {
             line = RhythmQuiz.line(
-                range = settings.sheetRange,
+                range = settings.effectiveSheetRange,
                 level = settings.rhythmLevel,
                 bars = settings.rhythmBars,
                 random = Random,
@@ -99,9 +98,7 @@ fun RhythmSheetScreen(
             val note = line[index].note ?: return
             val now = System.currentTimeMillis()
             val judgement = Answer.judge(entered, note.pitchClass, settings.notation)
-            val position = entered.position
-            val wrongOctave = settings.sheetExactOctave && position != null &&
-                judgement.result.isHit && Guitar.midiAt(position) != note.guitarMidi
+            val wrongOctave = judgement.result.isHit && entered.missesOctaveOf(note, settings.sheetExactOctave)
             val rightNote = judgement.result.isHit && !wrongOctave
             val timing = if (rightNote) Timing.of(now - expectedAt(index)) else Timing.MISSED
             grades = grades + (index to timing)
@@ -160,6 +157,7 @@ fun RhythmSheetScreen(
                 NoteInput(
                     notation = settings.notation,
                     mode = settings.inputMode,
+                    allowRecorder = true,
                     hideKeyLabels = settings.hideKeyLabels,
                     showStringNames = !settings.hideStringNames,
                     onModeChange = { mode -> updateSettings { it.copy(inputMode = mode) } },

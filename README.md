@@ -1,14 +1,17 @@
 # Musiktheorie-Trainer
 
-Kleine Android-App zum Üben von Musiktheorie auf der Gitarre. Offline, ohne Accounts, ohne Werbung.
+Kleine Android-App zum Üben von Musiktheorie mit Gitarre, Klavier und Blockflöte. Offline, ohne Accounts, ohne Werbung.
 
 - **Griffbrett-Töne:** Ton zu einem Punkt nennen oder alle Stellen eines Tons antippen (Bund 0–12, tiefe E- und A-Saite oder alle 6).
 - **Intervalle:** „Fis + Halbton = ?“, „D − Ganzton = ?“ in drei Schwierigkeitsstufen.
 - **Tonleitern:** Dur und natürliches Moll, nach Quintenzirkel oder zufällig. Der Grundton ist vorgegeben, du gibst die 7 folgenden Töne ein (Stufe 2 bis Oktave). Jede Eingabe prüft genau einen Schritt (Ganz/Halb). Danach siehst du die Tonleiter auf einer Saite als Griffbrett und Tab.
 - **Akkorde:** Dur- und Moll-Dreiklänge. Entweder die drei Töne eingeben (auf der Gitarre höchstens ein Ton pro Saite) oder einen spielbaren Griff bauen, der nach Regeln geprüft und mit dem Standardgriff verglichen wird.
 - **Notenlesen:** Violinschlüssel in Gitarrennotation (klingt eine Oktave tiefer). Bekannte Volkslieder oder Zufallszeilen, die Noten der Reihe nach benennen.
+- **Klaviertasten:** eine markierte Taste benennen oder zu einem Ton die Taste finden, auf zwei Oktaven ab c'.
+- **Flötengriffe:** Sopranflöte in C, barocke oder deutsche Griffweise. Ein Griffbild lesen oder einen Ton greifen. Nur die üblichen Anfängergriffe: c' bis d'', e'' g'' a'' mit halbem Daumenloch, barock dazu fis' und b'.
+- **Grundwissen:** je eine Seite zu Blockflöte, Klavier und Gitarre zum Nachlesen (Haltung, Tastatur, Saiten, Fingersätze, Grifftabelle, erste Akkorde).
 
-Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
+Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5), beim Notenlesen auch per Flötengriff (dann im Umfang c' bis e'', Oktave wird geprüft). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
 
 Deutsche Notation (H, B = Bb) ist Standard, englische lässt sich in den Einstellungen wählen. Enharmonische Verwechslungen gelten als richtig.
 
