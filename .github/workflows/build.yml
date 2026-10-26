@@ -21,6 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # A release tag has to name the version the APK reports, or the release page lies.
+      - name: Tag und Version abgleichen
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME passt nicht zu versionName $version in app/build.gradle.kts."
+            exit 1
+          fi
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -46,6 +56,11 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEYALIAS }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
+            # A release signed with the debug key could not update the installed app.
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo "::error::Ein Release braucht den eigenen Schlüssel, das Secret KEYSTORE_BASE64 fehlt."
+              exit 1
+            fi
             echo "::warning::Kein Secret KEYSTORE_BASE64, die APK wird mit dem Debug-Schlüssel signiert."
             exit 0
           fi
@@ -101,3 +116,30 @@ jobs:
             theory/build/reports/tests/
             app/build/reports/tests/
           if-no-files-found: ignore
+
+  # A pushed tag like v0.5.0 turns the tested APK into a release with the file attached, so it
+  # installs from the release page in one tap instead of out of a zip that expires.
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: apk-r${{ github.run_number }}
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          apk=$(ls *.apk)
+          # A release created by hand on GitHub already exists; then only the file is added.
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 \
+            || gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --generate-notes
+          gh release upload "$TAG" "$apk" --repo "$GITHUB_REPOSITORY" --clobber

@@ -141,17 +141,30 @@ Zwei Workflows unter `.github/workflows/`:
 
 | Workflow | Läuft | Ergebnis |
 |---|---|---|
-| `build.yml` | bei jedem Push und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>` |
-| `screenshots.yml` | nur per Hand | Emulator, APK installieren, jeden Bildschirm fotografieren, Artefakt `screenshots-r<Nummer>` |
+| `build.yml` | bei jedem Push und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>`. Bei einem Tag `v…` zusätzlich ein GitHub-Release mit der APK. |
+| `screenshots.yml` | per Hand, und wenn sich das Skript oder der Workflow ändert | Emulator, APK installieren, jeden Bildschirm fotografieren, Artefakt `screenshots-r<Nummer>` |
 
 ### APK vom Handy holen
 
+Fertige Versionen: auf der Repo-Seite **Releases** → oberster Eintrag → die `.apk` antippen und
+installieren (siehe [Variante B](#variante-b-als-datei)).
+
+Zwischenstände ohne Release:
+
 1. Im Repo auf **Actions** → Workflow **Build** → den obersten Lauf öffnen.
 2. Unten unter **Artifacts** `apk-r<Nummer>` antippen. Es lädt eine ZIP-Datei.
-3. In **Eigene Dateien** die ZIP entpacken und die APK darin installieren (siehe
-   [Variante B](#variante-b-als-datei)).
+3. In **Eigene Dateien** die ZIP entpacken und die APK darin installieren.
 
-Der Dateiname enthält Version, Laufnummer und Commit, z. B. `musiktheorie-0.4.0-r12-a1b2c3d.apk`.
+Artefakte werden nach 90 Tagen gelöscht, Releases bleiben. Der Dateiname enthält Version,
+Laufnummer und Commit, z. B. `musiktheorie-0.4.1-r12-a1b2c3d.apk`.
+
+### Release anlegen
+
+1. In `app/build.gradle.kts` `versionCode` um 1 erhöhen und `versionName` setzen, z. B. `0.5.0`.
+2. Einen Tag mit genau diesem Namen und `v` davor pushen: `git tag v0.5.0 && git push origin v0.5.0`.
+
+Der Build prüft, dass Tag und `versionName` übereinstimmen und dass der eigene Schlüssel verwendet
+wird, und legt dann den Release mit der APK an.
 
 ### Signierschlüssel als Secret hinterlegen
 
