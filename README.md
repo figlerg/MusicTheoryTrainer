@@ -141,7 +141,7 @@ Zwei Workflows unter `.github/workflows/`:
 
 | Workflow | Läuft | Ergebnis |
 |---|---|---|
-| `build.yml` | bei jedem Push und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>`. Bei einem Tag `v…` zusätzlich ein GitHub-Release mit der APK. |
+| `build.yml` | bei jedem Push auf jeden Branch und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>`. Ist `versionName` neu, zusätzlich Tag und GitHub-Release mit der APK. |
 | `screenshots.yml` | per Hand, und wenn sich das Skript oder der Workflow ändert | Emulator, APK installieren, jeden Bildschirm fotografieren, Artefakt `screenshots-r<Nummer>` |
 
 ### APK vom Handy holen
@@ -160,15 +160,18 @@ Laufnummer und Commit, z. B. `musiktheorie-0.4.1-r12-a1b2c3d.apk`.
 
 ### Release anlegen
 
-1. In `app/build.gradle.kts` `versionCode` um 1 erhöhen und `versionName` setzen, z. B. `0.5.0`,
-   und das nach `main` bringen.
-2. Auf GitHub: **Releases** → **Draft a new release** → bei *Choose a tag* `v0.5.0` eintippen und
-   *Create new tag* wählen, Ziel `main` → **Publish release**.
+Es reicht, in `app/build.gradle.kts` `versionCode` um 1 zu erhöhen und `versionName` neu zu
+setzen, z. B. `0.5.0`, und das auf irgendeinen Branch zu pushen. Gibt es den Tag `v0.5.0` noch
+nicht, legt der Build nach Tests und Signieren Tag und Release mit `musiktheorie-0.5.0.apk` an.
+Ohne neue Version wird nur gebaut. Eine Version mit Bindestrich (`0.5.0-beta1`) wird als
+Vorabversion markiert.
 
-Am PC geht statt Schritt 2 auch `git tag v0.5.0 && git push origin v0.5.0`.
+Veröffentlicht wird nur, was mit dem eigenen Schlüssel signiert ist. Der Tag zeigt auf den
+gebauten Commit, auch wenn der nicht auf `main` liegt. `main` holt man bei Gelegenheit per Pull
+Request nach.
 
-Der Build prüft, dass Tag und `versionName` übereinstimmen und dass der eigene Schlüssel verwendet
-wird, und hängt nach etwa 4 Minuten die APK an den Release.
+Scheitert der Release-Schritt mit 403: im Repo unter **Settings → Actions → General → Workflow
+permissions** „Read and write permissions“ wählen.
 
 ### Signierschlüssel als Secret hinterlegen
 
