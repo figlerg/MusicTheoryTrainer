@@ -104,11 +104,26 @@ def find(
     return None
 
 
+def dismiss_system_dialog(nodes: list[tuple[str, tuple[int, int], int]]) -> bool:
+    """A slow emulator likes to show "X isn't responding" on top of the app; wait it out."""
+    if not any("isn't responding" in text or "reagiert nicht" in text for text, _, _ in nodes):
+        return False
+    button = find("Wait", nodes, exact=True) or find("Warten", nodes, exact=True)
+    if not button:
+        return False
+    print("  Systemdialog weggeklickt")
+    adb("shell", "input", "tap", str(button[0]), str(button[1]))
+    time.sleep(1.0)
+    return True
+
+
 def tap(label: str, timeout: float = 20.0) -> None:
     """Wait for a label, tap it and wait until the screen has actually changed."""
     deadline = time.monotonic() + timeout
     while True:
         nodes = dump()
+        if dismiss_system_dialog(nodes):
+            continue
         centre = find(label, nodes)
         if centre:
             break
@@ -135,6 +150,7 @@ def back_until(label: str, attempts: int = 3) -> None:
     press for itself and the screen stays where it is.
     """
     for _ in range(attempts):
+        dismiss_system_dialog(dump())
         adb("shell", "input", "keyevent", "KEYCODE_BACK")
         time.sleep(0.8)
         if find(label, dump(), exact=True):
@@ -165,6 +181,7 @@ def capture(out: Path, prefix: str, screens: list[tuple[str, list[str]]]) -> Non
     adb("shell", "am", "force-stop", PACKAGE)
     adb("shell", "am", "start", "-n", ACTIVITY)
     time.sleep(3.0)
+    dismiss_system_dialog(dump())
 
     step = 0
 
