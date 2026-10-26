@@ -60,7 +60,7 @@ jobs:
       - name: Screenshots aufnehmen
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: ${{ inputs.api-level }}
+          api-level: ${{ inputs.api-level || '35' }}
           arch: x86_64
           target: google_apis
           profile: pixel_6
@@ -70,7 +70,7 @@ jobs:
             python3 tools/screenshots.py
             --apk app/build/outputs/apk/release/app-release.apk
             --out screenshots
-            --theme ${{ inputs.theme }}
+            --theme ${{ inputs.theme || 'dark' }}
 
       - name: Screenshots hochladen
         if: always()
