@@ -19,14 +19,14 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       # The runner image ships an SDK, but usually not the newest platform. Gradle can fetch it
       # itself; doing it here keeps the build log readable when that fails.
@@ -73,7 +73,7 @@ jobs:
           "$apksigner" verify --print-certs "$name" | grep -i 'SHA-256' || true
 
       - name: APK hochladen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: apk-r${{ github.run_number }}
           path: ${{ steps.apk.outputs.name }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Testberichte hochladen
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: testberichte-r${{ github.run_number }}
           path: |
