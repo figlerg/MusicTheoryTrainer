@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  # Publishing a release on github.com is the way to release from a phone, where pushing a tag
+  # is not an option. The build then attaches the APK to that release.
+  release:
+    types: [published]
 
 concurrency:
   group: build-${{ github.ref }}

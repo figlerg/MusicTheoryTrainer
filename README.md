@@ -160,11 +160,15 @@ Laufnummer und Commit, z. B. `musiktheorie-0.4.1-r12-a1b2c3d.apk`.
 
 ### Release anlegen
 
-1. In `app/build.gradle.kts` `versionCode` um 1 erhöhen und `versionName` setzen, z. B. `0.5.0`.
-2. Einen Tag mit genau diesem Namen und `v` davor pushen: `git tag v0.5.0 && git push origin v0.5.0`.
+1. In `app/build.gradle.kts` `versionCode` um 1 erhöhen und `versionName` setzen, z. B. `0.5.0`,
+   und das nach `main` bringen.
+2. Auf GitHub: **Releases** → **Draft a new release** → bei *Choose a tag* `v0.5.0` eintippen und
+   *Create new tag* wählen, Ziel `main` → **Publish release**.
+
+Am PC geht statt Schritt 2 auch `git tag v0.5.0 && git push origin v0.5.0`.
 
 Der Build prüft, dass Tag und `versionName` übereinstimmen und dass der eigene Schlüssel verwendet
-wird, und legt dann den Release mit der APK an.
+wird, und hängt nach etwa 4 Minuten die APK an den Release.
 
 ### Signierschlüssel als Secret hinterlegen
 
