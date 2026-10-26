@@ -13,6 +13,11 @@ on:
       api-level:
         description: Android-API-Level des Emulators
         default: '35'
+  # Changes to the screenshot machinery itself check themselves.
+  push:
+    paths:
+      - tools/screenshots.py
+      - .github/workflows/screenshots.yml
 
 permissions:
   contents: read
