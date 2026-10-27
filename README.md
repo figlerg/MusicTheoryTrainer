@@ -1,14 +1,18 @@
 # Musiktheorie-Trainer
 
-Kleine Android-App zum Üben von Musiktheorie auf der Gitarre. Offline, ohne Accounts, ohne Werbung.
+Kleine Android-App zum Üben von Musiktheorie mit Gitarre, Klavier und Blockflöte. Offline, ohne Accounts, ohne Werbung.
 
 - **Griffbrett-Töne:** Ton zu einem Punkt nennen oder alle Stellen eines Tons antippen (Bund 0–12, tiefe E- und A-Saite oder alle 6).
 - **Intervalle:** „Fis + Halbton = ?“, „D − Ganzton = ?“ in drei Schwierigkeitsstufen.
 - **Tonleitern:** Dur und natürliches Moll, nach Quintenzirkel oder zufällig. Der Grundton ist vorgegeben, du gibst die 7 folgenden Töne ein (Stufe 2 bis Oktave). Jede Eingabe prüft genau einen Schritt (Ganz/Halb). Danach siehst du die Tonleiter auf einer Saite als Griffbrett und Tab.
 - **Akkorde:** Dur- und Moll-Dreiklänge. Entweder die drei Töne eingeben (auf der Gitarre höchstens ein Ton pro Saite) oder einen spielbaren Griff bauen, der nach Regeln geprüft und mit dem Standardgriff verglichen wird.
 - **Notenlesen:** Violinschlüssel in Gitarrennotation (klingt eine Oktave tiefer). Bekannte Volkslieder oder Zufallszeilen, die Noten der Reihe nach benennen.
+- **Klaviertasten:** eine markierte Taste benennen oder zu einem Ton die Taste finden, auf zwei Oktaven ab c'.
+- **Flötengriffe:** Sopranflöte in C, barocke oder deutsche Griffweise. Ein Griffbild lesen oder einen Ton greifen. Nur die üblichen Anfängergriffe: c' bis d'', e'' g'' a'' mit halbem Daumenloch, barock dazu fis' und b'.
+- **Grundwissen:** je eine Seite zu Blockflöte, Klavier und Gitarre zum Nachlesen (Haltung, Tastatur, Saiten, Fingersätze, Grifftabelle, erste Akkorde).
+- **Strudel:** ein kurzer Kurs für [Strudel](https://strudel.cc), Musik als Code: Grundlagen (mit Bezug zu Tonleitern, Akkorden und den drei Instrumenten), Techno, Drum and Bass, Industrial/Aggrotech. Jedes Beispiel öffnet sich mit einem Tipp auf strudel.cc im Browser. Die App enthält keinen Strudel-Code und braucht kein Internet; die Beispiele stehen in `app/src/main/assets/strudel.md` und werden in der CI mit Strudels eigener Musterlogik geprüft (`tools/strudel-check`).
 
-Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
+Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5), beim Notenlesen auch per Flötengriff (dann im Umfang c' bis e'', Oktave wird geprüft). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
 
 Deutsche Notation (H, B = Bb) ist Standard, englische lässt sich in den Einstellungen wählen. Enharmonische Verwechslungen gelten als richtig.
 
@@ -131,7 +135,84 @@ keyAlias=mtt
 keyPassword=...
 ```
 
-Existiert die Datei, signiert `assembleRelease` automatisch damit.
+Existiert die Datei, signiert `assembleRelease` automatisch damit. Alternativ liest der Build die
+gleichen Werte aus den Umgebungsvariablen `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` und
+`KEY_PASSWORD` — so bekommt die CI den Schlüssel, ohne dass eine Datei im Repo liegt.
+
+## Bauen ohne PC (GitHub Actions)
+
+Zwei Workflows unter `.github/workflows/`:
+
+| Workflow | Läuft | Ergebnis |
+|---|---|---|
+| `build.yml` | bei jedem Push auf jeden Branch und per Hand | Unit-Tests (`:theory:test`, `:app:testDebugUnitTest`) und eine installierbare Release-APK als Artefakt `apk-r<Nummer>`. Ist `versionName` neu, zusätzlich Tag und GitHub-Release mit der APK. |
+| `screenshots.yml` | per Hand, und wenn sich das Skript oder der Workflow ändert | Emulator, APK installieren, jeden Bildschirm fotografieren, Artefakt `screenshots-r<Nummer>` |
+
+### APK vom Handy holen
+
+Fertige Versionen: auf der Repo-Seite **Releases** → oberster Eintrag → die `.apk` antippen und
+installieren (siehe [Variante B](#variante-b-als-datei)).
+
+Zwischenstände ohne Release:
+
+1. Im Repo auf **Actions** → Workflow **Build** → den obersten Lauf öffnen.
+2. Unten unter **Artifacts** `apk-r<Nummer>` antippen. Es lädt eine ZIP-Datei.
+3. In **Eigene Dateien** die ZIP entpacken und die APK darin installieren.
+
+Artefakte werden nach 90 Tagen gelöscht, Releases bleiben. Der Dateiname enthält Version,
+Laufnummer und Commit, z. B. `musiktheorie-0.4.1-r12-a1b2c3d.apk`.
+
+### Release anlegen
+
+Es reicht, in `app/build.gradle.kts` `versionCode` um 1 zu erhöhen und `versionName` neu zu
+setzen, z. B. `0.5.0`, und das auf irgendeinen Branch zu pushen. Gibt es den Tag `v0.5.0` noch
+nicht, legt der Build nach Tests und Signieren Tag und Release mit `musiktheorie-0.5.0.apk` an.
+Ohne neue Version wird nur gebaut. Eine Version mit Bindestrich (`0.5.0-beta1`) wird als
+Vorabversion markiert.
+
+Veröffentlicht wird nur, was mit dem eigenen Schlüssel signiert ist. Der Tag zeigt auf den
+gebauten Commit, auch wenn der nicht auf `main` liegt. `main` holt man bei Gelegenheit per Pull
+Request nach.
+
+Scheitert der Release-Schritt mit 403: im Repo unter **Settings → Actions → General → Workflow
+permissions** „Read and write permissions“ wählen.
+
+### Signierschlüssel als Secret hinterlegen
+
+Ohne Secret signiert die CI mit dem Debug-Schlüssel. Dann lässt sich die APK nicht über eine
+vorhandene Installation legen, und Deinstallieren löscht die Statistik. Damit die CI-APKs echte
+Updates deiner App sind, einmal (an dem Rechner, auf dem `release.jks` liegt):
+
+```bash
+base64 -w0 release.jks > release.jks.b64    # macOS: base64 -i release.jks -o release.jks.b64
+```
+
+Dann im Repo unter **Settings → Secrets and variables → Actions → New repository secret** vier
+Secrets anlegen:
+
+| Name | Inhalt |
+|---|---|
+| `KEYSTORE_BASE64` | der komplette Inhalt von `release.jks.b64` |
+| `STOREPASSWORD` | Passwort des Keystores (`storePassword`) |
+| `KEYALIAS` | Alias des Schlüssels (`keyAlias`), z. B. `mtt` |
+| `KEYPASSWORD` | Passwort des Schlüssels (`keyPassword`) |
+
+`release.jks.b64` danach löschen. Der Build-Log gibt den SHA-256-Fingerprint des Zertifikats aus:
+stimmt der mit dem deiner installierten App überein, installiert sich die APK als Update.
+
+### Screenshots
+
+**Actions** → **Screenshots** → **Run workflow**. Wählbar sind Farbschema (`dark`, `light`, `both`)
+und API-Level des Emulators. Der Lauf dauert gut 15 bis 25 Minuten.
+
+`tools/screenshots.py` steuert den Emulator über `adb`: es liest den Accessibility-Baum, tippt die
+Beschriftungen an und speichert nach jedem Schritt ein PNG. Die Liste der Bildschirme kommt aus
+`Exercise.kt`, neue Übungen landen also automatisch in den Screenshots. Das Skript läuft auch
+lokal gegen ein angeschlossenes Handy:
+
+```bash
+python3 tools/screenshots.py --apk app/build/outputs/apk/release/app-release.apk --out screenshots
+```
 
 ## Lizenz
 

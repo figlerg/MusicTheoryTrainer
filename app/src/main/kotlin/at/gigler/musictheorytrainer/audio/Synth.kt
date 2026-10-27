@@ -12,11 +12,11 @@ import kotlin.random.Random
 /** One tone of a phrase: starts at [start] seconds and sounds for [length] seconds. */
 data class PlayNote(val midi: Int, val start: Double, val length: Double)
 
-/** How a note sounds: a soft synth tone, or a plucked string for the guitar exercises. */
-enum class Voice { TONE, PLUCK }
+/** How a note sounds: a soft synth tone, a plucked string, or a blown recorder-like tone. */
+enum class Voice { TONE, PLUCK, FLUTE }
 
 /**
- * Two tiny synths, both plain Kotlin so they can be unit tested. Every tone fades in over 5 ms and
+ * Three tiny synths, both plain Kotlin so they can be unit tested. Every tone fades in over 5 ms and
  * out to exactly zero over 30 ms, so no waveform is ever cut mid-swing, which is what makes clicks.
  */
 object Synth {
@@ -40,7 +40,13 @@ object Synth {
     fun render(notes: List<PlayNote>, voice: Voice = Voice.PLUCK): FloatArray {
         val seconds = notes.maxOf { it.start + it.length } + TAIL_SECONDS
         val out = FloatArray((seconds * SAMPLE_RATE).toInt())
-        notes.forEach { if (voice == Voice.PLUCK) addPluck(out, it) else addTone(out, it) }
+        notes.forEach {
+            when (voice) {
+                Voice.PLUCK -> addPluck(out, it)
+                Voice.TONE -> addTone(out, it)
+                Voice.FLUTE -> addFlute(out, it)
+            }
+        }
         val peak = out.maxOf { abs(it) }
         if (peak > MAX_LEVEL) {
             val scale = MAX_LEVEL / peak
@@ -48,6 +54,11 @@ object Synth {
         }
         return out
     }
+
+    private const val FLUTE_ATTACK_SECONDS = 0.04
+    private const val FLUTE_RELEASE_SECONDS = 0.06
+    private const val CHIFF_SECONDS = 0.05
+    private val FLUTE_HARMONICS = doubleArrayOf(1.0, 0.22, 0.1)
 
     private fun frequencyOf(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
 
@@ -101,6 +112,32 @@ object Synth {
             }
             val envelope = min(1.0, i / attack) * min(1.0, (count - i) / release)
             out[first + i] += (value * envelope * LEVEL / NORMALIZE).toFloat()
+        }
+    }
+
+    /**
+     * Nearly a sine with a little second and third harmonic, held at a steady level like a blown
+     * note, plus a short puff of filtered noise at the start: the "chiff" of a recorder.
+     */
+    private fun addFlute(out: FloatArray, note: PlayNote) {
+        val frequency = frequencyOf(note.midi)
+        val first = (note.start * SAMPLE_RATE).toInt()
+        val count = min((note.length * SAMPLE_RATE).toInt(), out.size - first)
+        val attack = FLUTE_ATTACK_SECONDS * SAMPLE_RATE
+        val release = min(FLUTE_RELEASE_SECONDS * SAMPLE_RATE, count / 2.0)
+        val chiff = CHIFF_SECONDS * SAMPLE_RATE
+        val harmonics = FLUTE_HARMONICS.indices.filter { frequency * (it + 1) < SAMPLE_RATE / 2 }
+        val normalize = harmonics.sumOf { FLUTE_HARMONICS[it] }
+        val random = Random(note.midi)
+        var noise = 0.0
+        for (i in 0 until count) {
+            var value = 0.0
+            for (h in harmonics) value += sin(2 * PI * frequency * (h + 1) * i / SAMPLE_RATE) * FLUTE_HARMONICS[h]
+            value /= normalize
+            noise = (random.nextDouble() * 2 - 1 + noise) * 0.5
+            value += noise * 0.3 * exp(-i / chiff)
+            val envelope = min(1.0, i / attack) * min(1.0, (count - i) / release)
+            out[first + i] += (value * envelope * LEVEL).toFloat()
         }
     }
 }

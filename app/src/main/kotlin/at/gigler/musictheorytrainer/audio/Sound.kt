@@ -1,11 +1,18 @@
 package at.gigler.musictheorytrainer.audio
 
+import at.gigler.musictheorytrainer.theory.Recorder
 import kotlinx.coroutines.flow.StateFlow
 
 /** What the screens use to make noise; respects the "Ton abspielen" setting. */
 class Sound(private val player: TonePlayer, val enabled: Boolean, private val voice: Voice = Voice.PLUCK) {
 
     val playing: StateFlow<Boolean> get() = player.playing
+
+    /**
+     * Where a written note sounds on the instrument the voice stands for: the soprano recorder an
+     * octave above the page, the guitar (and the plain tone with it) an octave below.
+     */
+    fun soundingOf(writtenMidi: Int): Int = writtenMidi + if (voice == Voice.FLUTE) Recorder.SOUNDING_OFFSET else -12
 
     fun play(midi: Int) {
         if (enabled) player.play(midi, voice)

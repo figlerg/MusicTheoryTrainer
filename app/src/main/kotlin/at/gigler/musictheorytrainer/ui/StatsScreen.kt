@@ -133,6 +133,7 @@ private val InputMode.label: String
         InputMode.TEXT -> "Text"
         InputMode.KEYS -> "Tasten"
         InputMode.GUITAR -> "Gitarre"
+        InputMode.RECORDER -> "Flöte"
     }
 
 @Composable

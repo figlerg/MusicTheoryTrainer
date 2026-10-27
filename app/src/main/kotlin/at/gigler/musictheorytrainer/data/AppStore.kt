@@ -15,12 +15,13 @@ import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
 import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.RecorderSystem
 import at.gigler.musictheorytrainer.theory.RhythmLevel
 import at.gigler.musictheorytrainer.theory.StaffRange
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-enum class InputMode { TEXT, KEYS, GUITAR }
+enum class InputMode { TEXT, KEYS, GUITAR, RECORDER }
 
 enum class SheetSource { MELODIES, RANDOM }
 
@@ -52,7 +53,13 @@ data class Settings(
     val rhythmLevel: RhythmLevel = RhythmLevel.SIMPLE,
     val rhythmRests: Boolean = false,
     val rhythmBars: Int = 2,
+    val recorderSystem: RecorderSystem = RecorderSystem.BAROQUE,
+    val recorderReverse: Boolean = false,
+    val pianoReverse: Boolean = false,
 ) {
+    /** The flute cannot finger the low guitar notes, so reading with it always uses its own range. */
+    val effectiveSheetRange: StaffRange get() = if (inputMode == InputMode.RECORDER) StaffRange.RECORDER else sheetRange
+
     /** Always at least one string, low to high. */
     val stringList: List<Int> get() = strings.sorted().ifEmpty { listOf(0) }
 }
@@ -105,6 +112,9 @@ class AppStore(context: Context) {
             prefs[RHYTHM_LEVEL] = s.rhythmLevel.name
             prefs[RHYTHM_RESTS] = s.rhythmRests
             prefs[RHYTHM_BARS] = s.rhythmBars
+            prefs[RECORDER_SYSTEM] = s.recorderSystem.name
+            prefs[RECORDER_REVERSE] = s.recorderReverse
+            prefs[PIANO_REVERSE] = s.pianoReverse
         }
     }
 
@@ -166,6 +176,9 @@ class AppStore(context: Context) {
             rhythmLevel = enumOr(this[RHYTHM_LEVEL], d.rhythmLevel),
             rhythmRests = this[RHYTHM_RESTS] ?: d.rhythmRests,
             rhythmBars = this[RHYTHM_BARS] ?: d.rhythmBars,
+            recorderSystem = enumOr(this[RECORDER_SYSTEM], d.recorderSystem),
+            recorderReverse = this[RECORDER_REVERSE] ?: d.recorderReverse,
+            pianoReverse = this[PIANO_REVERSE] ?: d.pianoReverse,
         )
     }
 
@@ -198,6 +211,9 @@ class AppStore(context: Context) {
         val RHYTHM_LEVEL = stringPreferencesKey("rhythm_level")
         val RHYTHM_RESTS = booleanPreferencesKey("rhythm_rests")
         val RHYTHM_BARS = intPreferencesKey("rhythm_bars")
+        val RECORDER_SYSTEM = stringPreferencesKey("recorder_system")
+        val RECORDER_REVERSE = booleanPreferencesKey("recorder_reverse")
+        val PIANO_REVERSE = booleanPreferencesKey("piano_reverse")
 
         fun bestKey(variant: String) = intPreferencesKey("best_$variant")
 
