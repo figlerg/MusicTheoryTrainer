@@ -1,0 +1,15 @@
+{
+  "name": "strudel-check",
+  "private": true,
+  "description": "Checks the Strudel examples of the app: they must evaluate and use known sounds. Development only, nothing of this ends up in the app.",
+  "type": "module",
+  "scripts": {
+    "check": "node --import ./register.mjs check.mjs ../../app/src/main/assets/strudel.md"
+  },
+  "dependencies": {
+    "@strudel/core": "1.2.6",
+    "@strudel/mini": "1.2.6",
+    "@strudel/tonal": "1.2.6",
+    "@strudel/transpiler": "1.2.6"
+  }
+}

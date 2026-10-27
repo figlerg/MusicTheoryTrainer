@@ -10,6 +10,7 @@ Kleine Android-App zum Üben von Musiktheorie mit Gitarre, Klavier und Blockflö
 - **Klaviertasten:** eine markierte Taste benennen oder zu einem Ton die Taste finden, auf zwei Oktaven ab c'.
 - **Flötengriffe:** Sopranflöte in C, barocke oder deutsche Griffweise. Ein Griffbild lesen oder einen Ton greifen. Nur die üblichen Anfängergriffe: c' bis d'', e'' g'' a'' mit halbem Daumenloch, barock dazu fis' und b'.
 - **Grundwissen:** je eine Seite zu Blockflöte, Klavier und Gitarre zum Nachlesen (Haltung, Tastatur, Saiten, Fingersätze, Grifftabelle, erste Akkorde).
+- **Strudel:** ein kurzer Kurs für [Strudel](https://strudel.cc), Musik als Code: Grundlagen (mit Bezug zu Tonleitern, Akkorden und den drei Instrumenten), Techno, Drum and Bass, Industrial/Aggrotech. Jedes Beispiel öffnet sich mit einem Tipp auf strudel.cc im Browser. Die App enthält keinen Strudel-Code und braucht kein Internet; die Beispiele stehen in `app/src/main/assets/strudel.md` und werden in der CI mit Strudels eigener Musterlogik geprüft (`tools/strudel-check`).
 
 Eingabe per Text, Klaviertasten oder Gitarrengriffbrett (Bund 0–5), beim Notenlesen auch per Flötengriff (dann im Umfang c' bis e'', Oktave wird geprüft). Nach einer falschen Antwort kannst du es nochmal probieren oder dir die Lösung oder eine Erklärung zeigen lassen (Halbtonleiste mit Pfeilen). Für die Trefferquote zählt der erste Versuch. Unübliche Schreibweisen wie Fes, His oder Hes zählen als Treffer, werden aber gelb markiert und mit dem üblichen Namen ergänzt.
 

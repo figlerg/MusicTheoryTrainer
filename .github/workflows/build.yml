@@ -112,11 +112,31 @@ jobs:
             app/build/reports/tests/
           if-no-files-found: ignore
 
+  # The Strudel lessons are code that only strudel.cc runs. Strudel's own pattern engine checks
+  # that every example evaluates and only uses sounds strudel.cc loads.
+  strudel:
+    name: Strudel-Beispiele
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Beispiele prüfen
+        working-directory: tools/strudel-check
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check
+
   # A new versionName becomes tag vX.Y.Z and a release with the APK attached, which installs from
   # the release page in one tap instead of out of a zip that expires. Only this job may write.
   release:
     name: Release
-    needs: build
+    needs: [build, strudel]
     if: needs.build.outputs.signed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10

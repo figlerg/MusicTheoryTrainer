@@ -16,6 +16,7 @@ keystore.properties
 .fleet/
 
 # Tooling
+node_modules/
 __pycache__/
 screenshots/
 

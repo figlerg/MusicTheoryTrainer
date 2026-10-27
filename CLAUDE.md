@@ -11,6 +11,10 @@ aus, ohne PC.
   nur gesichertes Standardwissen für Einsteiger, nichts Spekulatives.
 - Die Flöte kennt nur die Griffe in `Recorder.kt`. Neue Griffe nur eintragen, wenn sie
   Standard sind; Flöten-Eingabe gibt es nur in Übungen, deren Fragen alle greifbar sind.
+- Strudel-Kurs: Lektionen nur in `app/src/main/assets/strudel.md`, ein ```strudel-Block pro
+  Lektion. `cd tools/strudel-check && npm ci && npm run check` prüft jedes Beispiel mit Strudels
+  Musterlogik (läuft, erzeugt Noten, nur Klänge, die strudel.cc lädt); die CI tut das auch. Kein
+  Strudel-Code in die App (AGPL): Beispiele öffnen auf strudel.cc.
 - Code-Kommentare und Commit-Nachrichten auf Englisch.
 - Das Repo ist öffentlich: keine persönlichen Angaben (Arbeitgeber, Rechnernamen, private
   Mailadressen). Commits laufen über `40119252+figlerg@users.noreply.github.com`.

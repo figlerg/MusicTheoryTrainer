@@ -22,6 +22,8 @@ from pathlib import Path
 PACKAGE = "at.gigler.musictheorytrainer"
 ACTIVITY = f"{PACKAGE}/.MainActivity"
 EXERCISE_KT = Path("app/src/main/kotlin/at/gigler/musictheorytrainer/data/Exercise.kt")
+STRUDEL_MD = Path("app/src/main/assets/strudel.md")
+STRUDEL_LABEL = "Strudel"
 SETTINGS_LABEL = "Einstellungen und Statistik"
 STATS_LABEL = "Statistik und Übungszeit"
 KNOWLEDGE_LABEL = "Grundwissen"
@@ -51,6 +53,10 @@ def read_screens() -> list[tuple[str, list[str]]]:
         (title, [name for category, name in exercises if category == key])
         for key, title in categories
     ]
+
+
+def read_strudel_chapters() -> list[str]:
+    return [line[2:].strip() for line in STRUDEL_MD.read_text(encoding="utf-8").splitlines() if line.startswith("# ")]
 
 
 # --- reading and driving the screen -------------------------------------------------
@@ -212,6 +218,14 @@ def capture(out: Path, prefix: str, screens: list[tuple[str, list[str]]]) -> Non
     for tab in KNOWLEDGE_TABS:
         tap(tab)
         shot(out, numbered(f"grundwissen-{tab}"))
+    back_until(SETTINGS_LABEL)
+
+    tap(STRUDEL_LABEL)
+    chapters = read_strudel_chapters()
+    shot(out, numbered(f"strudel-{chapters[0]}"))
+    for chapter in chapters[1:]:
+        tap(chapter)
+        shot(out, numbered(f"strudel-{chapter}"))
     back_until(SETTINGS_LABEL)
 
     # The recorder input only shows up after switching to it, which the tour above never does.

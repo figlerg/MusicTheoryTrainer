@@ -36,11 +36,12 @@ import java.io.File
 /**
  * Screens are addressed by a small string so they survive process death: null is the home screen,
  * "CAT:<name>" a category, "EX:<name>" an exercise, [SETTINGS_SCREEN] the settings and
- * [KNOWLEDGE_SCREEN] the basics pages.
+ * [KNOWLEDGE_SCREEN] the basics pages, [STRUDEL_SCREEN] the Strudel course.
  */
 private const val SETTINGS_SCREEN = "SETTINGS"
 private const val STATS_SCREEN = "STATS"
 private const val KNOWLEDGE_SCREEN = "KNOWLEDGE"
+private const val STRUDEL_SCREEN = "STRUDEL"
 private const val CATEGORY_PREFIX = "CAT:"
 private const val EXERCISE_PREFIX = "EX:"
 
@@ -101,6 +102,7 @@ fun App(store: AppStore, player: TonePlayer) {
                         scores = scores,
                         onOpen = { screen = CATEGORY_PREFIX + it.name },
                         onKnowledge = { screen = KNOWLEDGE_SCREEN },
+                        onStrudel = { screen = STRUDEL_SCREEN },
                         onSettings = { screen = SETTINGS_SCREEN },
                     )
 
@@ -112,6 +114,8 @@ fun App(store: AppStore, player: TonePlayer) {
                     )
 
                     s == KNOWLEDGE_SCREEN -> KnowledgeScreen(current, onBack = up)
+
+                    s == STRUDEL_SCREEN -> StrudelScreen(onBack = up)
 
                     s == STATS_SCREEN -> StatsScreen(
                         log = log,

@@ -19,3 +19,8 @@ kotlin {
 dependencies {
     testImplementation(libs.junit)
 }
+
+// StrudelTest parses the app's lesson file; without this a cached test result would hide edits to it.
+tasks.test {
+    inputs.file("../app/src/main/assets/strudel.md")
+}
