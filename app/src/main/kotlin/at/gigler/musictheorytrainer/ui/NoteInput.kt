@@ -60,9 +60,12 @@ enum class InputState {
 }
 
 /**
- * Free text, piano keys or a fretboard in first position. [mode] is the saved setting, so a
- * switch here sticks across questions, screens and restarts. Where the fretboard would give the
- * answer away ([allowGuitar] = false) the keys stand in for it.
+ * Free text, piano keys, a fretboard in first position or recorder fingerings. [mode] is the
+ * saved setting, so a switch here sticks across questions, screens and restarts. Where the
+ * fretboard would give the answer away ([allowGuitar] = false) the keys stand in for it, and
+ * where the keys would ([allowKeys] = false) the text field. The
+ * recorder only fingers a few notes, so screens opt in with [allowRecorder] where every
+ * question is playable on it.
  */
 @Composable
 fun NoteInput(
@@ -74,14 +77,22 @@ fun NoteInput(
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
     allowGuitar: Boolean = true,
+    allowKeys: Boolean = true,
+    allowRecorder: Boolean = false,
     guitarMarks: List<FretMark> = emptyList(),
     onUnreadable: () -> Unit = {},
     hideKeyLabels: Boolean = false,
     showStringNames: Boolean = true,
 ) {
-    val effective = if (mode == InputMode.GUITAR && !allowGuitar) InputMode.KEYS else mode
+    val fallback = if (allowKeys) InputMode.KEYS else InputMode.TEXT
+    val effective = when {
+        mode == InputMode.KEYS && !allowKeys -> InputMode.TEXT
+        mode == InputMode.GUITAR && !allowGuitar -> fallback
+        mode == InputMode.RECORDER && !allowRecorder -> fallback
+        else -> mode
+    }
     Column(modifier.fillMaxWidth()) {
-        ModeSwitch(effective, allowGuitar, onModeChange)
+        ModeSwitch(effective, allowGuitar, allowKeys, allowRecorder, onModeChange)
         when (effective) {
             InputMode.TEXT -> TextNoteInput(notation, state, onNote, onContinue, onUnreadable)
             InputMode.KEYS -> ContinueOr(state, onContinue, KEY_HEIGHT * 2 + KEY_GAP) {
@@ -96,15 +107,31 @@ fun NoteInput(
                     onTap = { onNote(EnteredNote(Guitar.pitchAt(it), position = it)) },
                 )
             }
+            InputMode.RECORDER -> ContinueOr(state, onContinue, RECORDER_INPUT_HEIGHT) {
+                RecorderInput(
+                    enabled = state == InputState.ACCEPTING,
+                    // No spelling: like the keys, a fingering knows the pitch, not its name.
+                    onNote = { onNote(EnteredNote(it.pitchClass, writtenMidi = it.writtenMidi)) },
+                    onUnknown = onUnreadable,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ModeSwitch(current: InputMode, allowGuitar: Boolean, onModeChange: (InputMode) -> Unit) {
+private fun ModeSwitch(
+    current: InputMode,
+    allowGuitar: Boolean,
+    allowKeys: Boolean,
+    allowRecorder: Boolean,
+    onModeChange: (InputMode) -> Unit,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         for (mode in InputMode.entries) {
+            if (mode == InputMode.KEYS && !allowKeys) continue
             if (mode == InputMode.GUITAR && !allowGuitar) continue
+            if (mode == InputMode.RECORDER && !allowRecorder) continue
             val selected = mode == current
             TextButton(
                 onClick = { onModeChange(mode) },
@@ -117,6 +144,7 @@ private fun ModeSwitch(current: InputMode, allowGuitar: Boolean, onModeChange: (
                         InputMode.TEXT -> "Text"
                         InputMode.KEYS -> "Tasten"
                         InputMode.GUITAR -> "Gitarre"
+                        InputMode.RECORDER -> "Flöte"
                     },
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                 )

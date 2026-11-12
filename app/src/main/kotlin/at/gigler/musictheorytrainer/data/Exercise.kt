@@ -4,13 +4,16 @@ package at.gigler.musictheorytrainer.data
 enum class Category(val title: String, val hint: String) {
     HEAR("Hören", "Intervalle und Akkorde am Klang erkennen"),
     NOTES("Noten", "Vom Blatt lesen"),
-    FRETBOARD("Griffbrett", "Töne und Griffe auf der Gitarre"),
+    // Still FRETBOARD inside: the name is part of the saved screen state.
+    FRETBOARD("Instrumente", "Gitarre, Klavier, Blockflöte"),
     THEORY("Theorie", "Rechnen und bauen"),
 }
 
 enum class Exercise(val category: Category, val title: String, val hint: String) {
     FRETBOARD(Category.FRETBOARD, "Griffbrett-Töne", "Ton nennen oder Stelle finden"),
     CHORDS(Category.FRETBOARD, "Akkorde", "Dreiklänge aus Tönen oder als Griff"),
+    PIANO(Category.FRETBOARD, "Klaviertasten", "Taste benennen oder finden"),
+    RECORDER(Category.FRETBOARD, "Flötengriffe", "Griff lesen oder Ton greifen"),
     SHEET(Category.NOTES, "Notenlesen", "Noten im Violinschlüssel benennen"),
     SHEET_SPEED(Category.NOTES, "Notenlesen auf Zeit", "So viele Noten wie möglich, Tempo zählt"),
     SHEET_RHYTHM(Category.NOTES, "Im Takt lesen", "Mit Notenwerten und Metronom, Timing wird bewertet"),

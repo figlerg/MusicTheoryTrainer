@@ -1,0 +1,169 @@
+name: Build
+
+# Every push builds and tests. When versionName in app/build.gradle.kts is new, the release job
+# turns the signed APK into a GitHub release, tag included. Neither this session nor a phone can
+# push tags, so the tag has to come from here.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Tests und APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.apk.outputs.version }}
+      signed: ${{ steps.signing.outputs.signed }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      # The runner image ships an SDK, but usually not the newest platform. Gradle can fetch it
+      # itself; doing it here keeps the build log readable when that fails.
+      - name: Compile-SDK installieren
+        run: |
+          api=$(grep -oP 'compileSdk\s*=\s*\K[0-9]+' app/build.gradle.kts)
+          echo "compileSdk = $api"
+          sdkmanager "platforms;android-$api" \
+            || echo "::warning::Platform $api ist auf dem Runner nicht verfügbar, Gradle versucht es selbst."
+
+      # Signing with the own key is optional. Without the secrets the release build falls back to
+      # the debug key; such an APK only installs after uninstalling the app and is never released.
+      - name: Signierschlüssel auspacken
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.STOREPASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEYALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Kein Secret KEYSTORE_BASE64, die APK wird mit dem Debug-Schlüssel signiert und nicht veröffentlicht."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Half a configuration would otherwise surface as an unrelated Gradle error.
+          missing=""
+          [ -n "$KEYSTORE_PASSWORD" ] || missing="$missing STOREPASSWORD"
+          [ -n "$KEY_ALIAS" ] || missing="$missing KEYALIAS"
+          if [ -n "$missing" ]; then
+            echo "::error::KEYSTORE_BASE64 ist gesetzt, aber diese Secrets fehlen oder sind leer:$missing"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > release.jks
+          # Opening the key here names a wrong password or alias directly.
+          keytool -list -keystore release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null \
+            || { echo "::error::Keystore lässt sich mit STOREPASSWORD und KEYALIAS nicht öffnen."; exit 1; }
+          echo "KEYSTORE_FILE=release.jks" >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Unit-Tests
+        run: ./gradlew :theory:test :app:testDebugUnitTest
+
+      - name: Release-APK bauen
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.STOREPASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEYALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEYPASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: APK benennen und prüfen
+        id: apk
+        run: |
+          version=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          name="musiktheorie-$version-r${GITHUB_RUN_NUMBER}-$(git rev-parse --short HEAD).apk"
+          mv app/build/outputs/apk/release/app-release.apk "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          ls -l "$name"
+          # The certificate fingerprint says whether this APK updates the installed app or not.
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/* | tail -1)/apksigner
+          "$apksigner" verify --print-certs "$name" | grep -i 'SHA-256' || true
+
+      - name: APK hochladen
+        uses: actions/upload-artifact@v5
+        with:
+          name: apk-r${{ github.run_number }}
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+
+      - name: Testberichte hochladen
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: testberichte-r${{ github.run_number }}
+          path: |
+            theory/build/reports/tests/
+            app/build/reports/tests/
+          if-no-files-found: ignore
+
+  # The Strudel lessons are code that only strudel.cc runs. Strudel's own pattern engine checks
+  # that every example evaluates and only uses sounds strudel.cc loads.
+  strudel:
+    name: Strudel-Beispiele
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Beispiele prüfen
+        working-directory: tools/strudel-check
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check
+
+  # A new versionName becomes tag vX.Y.Z and a release with the APK attached, which installs from
+  # the release page in one tap instead of out of a zip that expires. Only this job may write.
+  release:
+    name: Release
+    needs: [build, strudel]
+    if: needs.build.outputs.signed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: apk-r${{ github.run_number }}
+
+      - name: Release anlegen, wenn die Version neu ist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          tag="v$VERSION"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" > /dev/null 2>&1; then
+            echo "$tag gibt es schon, also kein neuer Release."
+            exit 0
+          fi
+          apk="musiktheorie-$VERSION.apk"
+          mv ./*.apk "$apk"
+          prerelease=""
+          [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
+          gh release create "$tag" "$apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$tag" --generate-notes $prerelease
+          url="https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag"
+          echo "Release: $url"
+          echo "Release [$tag]($url) mit \`$apk\` angelegt." >> "$GITHUB_STEP_SUMMARY"

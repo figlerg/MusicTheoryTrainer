@@ -27,6 +27,19 @@ object NoteNames {
         return if (sharp == flat) sharp else "$sharp/$flat"
     }
 
+    /**
+     * A note in one particular octave. German uses Helmholtz names (C, c, c', fis'', b'), English
+     * scientific pitch (C4, F#5, Bb4). Octave 4 is the one starting at middle C.
+     */
+    fun withOctave(note: SpelledNote, octave: Int, notation: Notation): String {
+        val name = note.name(notation)
+        return when {
+            notation == Notation.ENGLISH -> name + octave
+            octave >= 3 -> name.lowercase() + "'".repeat(octave - 3)
+            else -> name + ",".repeat(2 - octave)
+        }
+    }
+
     fun isNatural(pitch: PitchClass): Boolean =
         name(pitch, Notation.GERMAN, Spelling.SHARP) == name(pitch, Notation.GERMAN, Spelling.FLAT)
 }

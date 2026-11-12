@@ -9,7 +9,7 @@ fun variantKey(exercise: Exercise, settings: Settings): String = when (exercise)
     Exercise.SHEET_SPEED -> listOf(
         "speed",
         settings.inputMode.name,
-        settings.sheetRange.name,
+        settings.effectiveSheetRange.name,
         settings.speedSeconds.toString(),
         if (settings.sheetExactOctave) "oct" else "any",
     ).joinToString("_")
@@ -17,7 +17,7 @@ fun variantKey(exercise: Exercise, settings: Settings): String = when (exercise)
     Exercise.SHEET_RHYTHM -> listOf(
         "rhythm",
         settings.inputMode.name,
-        settings.sheetRange.name,
+        settings.effectiveSheetRange.name,
         settings.rhythmLevel.name,
         settings.rhythmBars.toString(),
         settings.metronomeBpm.toString(),
@@ -34,8 +34,9 @@ fun variantLabel(exercise: Exercise, settings: Settings): String {
         InputMode.TEXT -> "Text"
         InputMode.KEYS -> "Tasten"
         InputMode.GUITAR -> "Gitarre"
+        InputMode.RECORDER -> "Flöte"
     }
-    val range = settings.sheetRange.label.substringBefore(" (")
+    val range = settings.effectiveSheetRange.label.substringBefore(" (")
     return when (exercise) {
         Exercise.SHEET_SPEED -> listOf(mode, range, "${settings.speedSeconds} s").joinToString(" · ")
         Exercise.SHEET_RHYTHM -> listOf(
