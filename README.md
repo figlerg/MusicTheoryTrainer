@@ -214,6 +214,10 @@ lokal gegen ein angeschlossenes Handy:
 python3 tools/screenshots.py --apk app/build/outputs/apk/release/app-release.apk --out screenshots
 ```
 
+## Icon
+
+Das Icon folgt der gemeinsamen Gestaltung aus [figlerg/design](https://github.com/figlerg/design): Mint `#8ED6BF`, weißes Motiv. Der Violinschlüssel stammt aus der Notenschrift [Bravura](https://github.com/steinbergmedia/bravura) von Steinberg (SIL Open Font License 1.1).
+
 ## Lizenz
 
 MIT, siehe [LICENSE](LICENSE).
