@@ -19,6 +19,9 @@ val signingStorePassword: String? = signingValue("KEYSTORE_PASSWORD", "storePass
 val signingAlias: String? = signingValue("KEY_ALIAS", "keyAlias")
 val signingKeyPassword: String? = signingValue("KEY_PASSWORD", "keyPassword") ?: signingStorePassword
 
+// CI signs the APK itself with apksigner when it rotates to the shared key; Gradle leaves it unsigned.
+val unsignedRelease = System.getenv("UNSIGNED_RELEASE") == "true"
+
 android {
     namespace = "at.gigler.musictheorytrainer"
     // The Compose BOM needs at least API 37 to compile against; targetSdk stays at 36.
@@ -48,7 +51,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = if (unsignedRelease) null else signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 

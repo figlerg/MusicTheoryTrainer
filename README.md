@@ -200,6 +200,17 @@ Secrets anlegen:
 `release.jks.b64` danach löschen. Der Build-Log gibt den SHA-256-Fingerprint des Zertifikats aus:
 stimmt der mit dem deiner installierten App überein, installiert sich die APK als Update.
 
+### Gemeinsamer Schlüssel aller Apps
+
+Alle Apps des Nutzers sollen denselben Schlüssel haben (siehe
+[figlerg/design, integrations](https://github.com/figlerg/design/tree/main/integrations)). Dafür
+kommen vier weitere Secrets dazu, mit denselben Namen und Werten wie in PushMe:
+`SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`.
+Sind sie gesetzt, signiert die CI mit dem alten und dem gemeinsamen Schlüssel plus einem
+Rotationsnachweis (`tools/sign-rotated.sh`). Ab Android 9 gilt dann der gemeinsame Schlüssel, und
+die APK installiert sich trotzdem als Update über die alte Version. Die alten Secrets bleiben
+dafür stehen.
+
 ### Screenshots
 
 **Actions** → **Screenshots** → **Run workflow**. Wählbar sind Farbschema (`dark`, `light`, `both`)

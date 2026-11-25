@@ -72,6 +72,34 @@ jobs:
           echo "KEYSTORE_FILE=release.jks" >> "$GITHUB_ENV"
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
+      # The owner's shared key, the one all apps use (figlerg/design, integrations/README.md).
+      # Same secret names and values as in PushMe. With it the APK is signed by both keys and a
+      # proof of rotation, so installed versions keep updating (tools/sign-rotated.sh).
+      - name: Gemeinsamen Schlüssel auspacken
+        id: shared
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        run: |
+          if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "Kein gemeinsamer Schlüssel hinterlegt, signiert wird nur mit dem eigenen."
+            exit 0
+          fi
+          missing=""
+          [ -n "$SIGNING_STORE_PASSWORD" ] || missing="$missing SIGNING_STORE_PASSWORD"
+          [ -n "$SIGNING_KEY_ALIAS" ] || missing="$missing SIGNING_KEY_ALIAS"
+          if [ -n "$missing" ]; then
+            echo "::error::SIGNING_KEYSTORE_BASE64 ist gesetzt, aber diese Secrets fehlen oder sind leer:$missing"
+            exit 1
+          fi
+          printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 -d > shared.p12
+          keytool -list -keystore shared.p12 -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS" > /dev/null \
+            || { echo "::error::Gemeinsamer Keystore lässt sich mit SIGNING_STORE_PASSWORD und SIGNING_KEY_ALIAS nicht öffnen."; exit 1; }
+          echo "UNSIGNED_RELEASE=true" >> "$GITHUB_ENV"
+          echo "rotate=true" >> "$GITHUB_OUTPUT"
+
       - name: Unit-Tests
         run: ./gradlew :theory:test :app:testDebugUnitTest
 
@@ -81,6 +109,21 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEYALIAS }}
           KEY_PASSWORD: ${{ secrets.KEYPASSWORD }}
         run: ./gradlew :app:assembleRelease
+
+      - name: Mit Schlüsselrotation signieren
+        if: steps.shared.outputs.rotate == 'true'
+        env:
+          OLD_KS: release.jks
+          OLD_ALIAS: ${{ secrets.KEYALIAS }}
+          OLD_STORE_PASS: ${{ secrets.STOREPASSWORD }}
+          OLD_KEY_PASS: ${{ secrets.KEYPASSWORD }}
+          NEW_KS: shared.p12
+          NEW_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          NEW_STORE_PASS: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          NEW_KEY_PASS: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          tools/sign-rotated.sh app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/app-release.apk
 
       - name: APK benennen und prüfen
         id: apk

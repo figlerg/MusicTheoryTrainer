@@ -21,6 +21,21 @@ aus, ohne PC.
 - Vor Abweichungen vom Besprochenen oder größeren Zusätzen nachfragen und eine Empfehlung
   mitgeben.
 
+## Integrationen mit den anderen Apps
+
+Alles, was diese App mit anderen Apps des Nutzers teilt, steht in figlerg/design, Ordner
+[`integrations/`](https://github.com/figlerg/design/tree/main/integrations) auf `main`. Das ist die
+einzige Quelle.
+
+- Vor jeder Arbeit, die App-Grenzen überschreitet (Daten einer anderen App lesen, ihr etwas
+  schicken, etwas Neues anbieten): `integrations/` lesen und in `wishes.md` nach offenen Anfragen an
+  diese App schauen.
+- Einen Vertrag dort in derselben Änderung wie den Code ändern. Verträge nie in dieses Repo
+  kopieren, nur verlinken.
+- Anfragen an andere Apps kommen in `wishes.md`.
+- Was diese App anbieten könnte:
+  [`integrations/offers/music-theory.md`](https://github.com/figlerg/design/blob/main/integrations/offers/music-theory.md).
+
 ## Falle
 
 Rückrufe wie `onTap` oder `onNote` dürfen keine Frage-Daten einfangen, sie müssen sie aus dem
@@ -47,5 +62,12 @@ falsch gewertet (siehe Commit 636fec9).
 4. Mit den GitHub-Tools prüfen, ob der Release entstanden ist, und dem Nutzer den Link
    `https://github.com/figlerg/MusicTheoryTrainer/releases/tag/v<versionName>` schicken.
 
-Signier-Secrets im Repo: `KEYSTORE_BASE64`, `STOREPASSWORD`, `KEYALIAS`, `KEYPASSWORD`. Ohne sie
-signiert die CI mit dem Debug-Schlüssel und veröffentlicht nichts.
+Signier-Secrets im Repo: `KEYSTORE_BASE64`, `STOREPASSWORD`, `KEYALIAS`, `KEYPASSWORD` (der eigene,
+alte Schlüssel). Ohne sie signiert die CI mit dem Debug-Schlüssel und veröffentlicht nichts.
+
+Alle Apps des Nutzers sollen mit einem gemeinsamen Schlüssel signiert sein (Kanäle mit
+`signature`-Berechtigungen hängen daran). Sind zusätzlich `SIGNING_KEYSTORE_BASE64`,
+`SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD` gesetzt (dieselben Werte wie in
+PushMe), baut Gradle unsigniert und `tools/sign-rotated.sh` signiert mit beiden Schlüsseln und einem
+Rotationsnachweis alt zu neu. So bleibt jede Version ein Update der installierten App. Die alten
+Secrets müssen dafür dauerhaft bleiben.
