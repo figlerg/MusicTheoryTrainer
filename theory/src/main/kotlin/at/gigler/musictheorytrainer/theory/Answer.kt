@@ -2,14 +2,26 @@ package at.gigler.musictheorytrainer.theory
 
 /**
  * One answer as entered by the user. Text input carries its spelling; keys and fretboard only
- * know the pitch (and the fretboard also the position, for exact-octave checks).
+ * know the pitch. For exact-octave checks the fretboard adds its [position] and the recorder the
+ * [writtenMidi] of its fingering.
  */
 data class EnteredNote(
     val pitch: PitchClass,
     val spelled: SpelledNote? = null,
     val irregular: Boolean = false,
     val position: FretPosition? = null,
+    val writtenMidi: Int? = null,
 ) {
+    /**
+     * Whether this names [note] in the wrong octave. A recorder fingering plays exactly one written
+     * note, so it is always checked; the fretboard only with [exactGuitar], and text or keys never.
+     */
+    fun missesOctaveOf(note: StaffNote, exactGuitar: Boolean): Boolean = when {
+        writtenMidi != null -> writtenMidi != note.writtenMidi
+        position != null && exactGuitar -> Guitar.midiAt(position) != note.guitarMidi
+        else -> false
+    }
+
     companion object {
         fun fromText(input: String, notation: Notation): EnteredNote? =
             NoteParser.parseDetailed(input, notation)?.let { EnteredNote(it.note.pitchClass, it.note, it.irregular) }

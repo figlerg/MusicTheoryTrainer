@@ -90,4 +90,12 @@ class ChordsTest {
         assertEquals("x-13-15-15-15-13", Grip(listOf(null, 13, 15, 15, 15, 13)).shorthand())
         assertEquals(Grip(listOf(null, 13, 15, 15, 15, 13)), Grip.parse("x-13-15-15-15-13"))
     }
+
+    @Test
+    fun `first chords use the songbook grips`() {
+        assertEquals(
+            "C x32010, D xx0232, E 022100, G 320003, A x02220, Am x02210, Dm xx0231, Em 022000",
+            Grips.FIRST_CHORDS.joinToString(", ") { "${it.symbol(Notation.GERMAN)} ${Grips.standard(it).shorthand()}" },
+        )
+    }
 }

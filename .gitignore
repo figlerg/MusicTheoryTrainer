@@ -15,6 +15,11 @@ keystore.properties
 .vscode/
 .fleet/
 
+# Tooling
+node_modules/
+__pycache__/
+screenshots/
+
 # OS
 .DS_Store
 Thumbs.db

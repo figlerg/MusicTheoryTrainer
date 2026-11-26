@@ -98,6 +98,11 @@ object Grips {
         (PitchClass.G to ChordType.MAJOR) to Grip.parse("320003"),
     )
 
+    /** The open chords most beginners learn first: C, D, E, G, A and Am, Dm, Em. */
+    val FIRST_CHORDS: List<Chord> =
+        listOf(Letter.C, Letter.D, Letter.E, Letter.G, Letter.A).map { Chord(SpelledNote(it), ChordType.MAJOR) } +
+            listOf(Letter.A, Letter.D, Letter.E).map { Chord(SpelledNote(it), ChordType.MINOR) }
+
     /** The songbook grip: an open chord, or the E- or A-shape barre, whichever sits lower. */
     fun standard(chord: Chord): Grip {
         OPEN[chord.root.pitchClass to chord.type]?.let { return it }

@@ -7,6 +7,7 @@ import at.gigler.musictheorytrainer.theory.IntervalDifficulty
 import at.gigler.musictheorytrainer.theory.KeyChoice
 import at.gigler.musictheorytrainer.theory.KeyOrder
 import at.gigler.musictheorytrainer.theory.Notation
+import at.gigler.musictheorytrainer.theory.RecorderSystem
 import at.gigler.musictheorytrainer.theory.RhythmLevel
 import at.gigler.musictheorytrainer.theory.StaffRange
 
@@ -72,18 +73,27 @@ object Options {
         "Eingabe",
         hint = "Lässt sich auch in der Übung umschalten.",
         values = InputMode.entries,
-        labels = listOf("Text", "Tasten", "Gitarre"),
+        labels = listOf("Text", "Tasten", "Gitarre", "Flöte"),
         get = { it.inputMode },
         set = { s, v -> s.copy(inputMode = v) },
+    )
+
+    val recorderSystem = choice(
+        "Flöte: Griffweise",
+        hint = "Steht oft auf der Flöte (B oder barock, D oder deutsch). Sonst f' mit Daumen und 1 2 3 4 greifen: klingt es sauber, ist es deutsch.",
+        values = RecorderSystem.entries,
+        labels = listOf("Barock", "Deutsch"),
+        get = { it.recorderSystem },
+        set = { s, v -> s.copy(recorderSystem = v) },
     )
 
     val sound = Option.Switch("Ton abspielen", checked = { it.sound }, set = { s, v -> s.copy(sound = v) })
 
     val voice = choice(
         "Klang",
-        hint = "Gitarre zupft eine Saite an, Ton ist ein weicher Synth-Klang.",
+        hint = "Gitarre zupft eine Saite an, Ton ist ein weicher Synth-Klang, Flöte ein gehauchter Ton eine Oktave über der Note.",
         values = Voice.entries,
-        labels = listOf("Ton", "Gitarre"),
+        labels = listOf("Ton", "Gitarre", "Flöte"),
         get = { it.voice },
         set = { s, v -> s.copy(voice = v) },
     )
@@ -138,7 +148,7 @@ object Options {
 
     val sheetRange = choice(
         "Tonumfang",
-        hint = "Gilt für Zufallszeilen.",
+        hint = "Gilt für Zufallszeilen. Mit Flöten-Eingabe immer c' bis e''.",
         values = StaffRange.entries,
         labels = StaffRange.entries.map { it.label },
         get = { it.sheetRange },
@@ -237,11 +247,13 @@ object Options {
     )
 
     /** Shown in every exercise, below its own options. */
-    val general: List<Option> = listOf(notation, inputMode, sound, voice)
+    val general: List<Option> = listOf(notation, inputMode, recorderSystem, sound, voice)
 
     fun of(exercise: Exercise): List<Option> = when (exercise) {
         Exercise.FRETBOARD -> listOf(strings, showTab, hideKeyLabels)
         Exercise.CHORDS -> listOf(keyChoice, keyOrder, chordRootGiven, gripRootInBass, hideKeyLabels)
+        Exercise.PIANO -> listOf(hideKeyLabels)
+        Exercise.RECORDER -> emptyList()
         Exercise.SHEET -> listOf(sheetRange, sheetExactOctave, hideStringNames, hideKeyLabels)
         Exercise.INTERVALS -> listOf(intervalDifficulty, hideKeyLabels)
         Exercise.SCALE -> listOf(keyChoice, keyOrder, showTab, hideKeyLabels)

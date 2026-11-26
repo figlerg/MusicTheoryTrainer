@@ -73,4 +73,18 @@ class SynthTest {
         assertEquals(first.size, second.size)
         assertTrue(first.indices.all { first[it] == second[it] })
     }
+
+    @Test
+    fun `a flute note fades in and out and holds its level`() {
+        val samples = Synth.render(listOf(PlayNote(79, 0.0, 1.0)), Voice.FLUTE)
+        assertTrue(abs(samples.first()) < 1e-3f)
+        assertTrue(abs(samples.last()) < 1e-3f)
+        assertTrue(samples.all { abs(it) <= Synth.MAX_LEVEL })
+        fun peak(from: Double, to: Double) =
+            ((from * Synth.SAMPLE_RATE).toInt() until (to * Synth.SAMPLE_RATE).toInt()).maxOf { abs(samples[it]) }
+        val early = peak(0.2, 0.3)
+        val late = peak(0.8, 0.9)
+        // Blown, not plucked: the level stays where it was.
+        assertTrue("late $late vs early $early", abs(late - early) < 0.05f * early + 0.01f)
+    }
 }

@@ -50,6 +50,9 @@ enum class StaffRange(val low: Int, val high: Int, val label: String) {
 
     /** E3 to A5: everything that can be played in the first position, frets 0 to 5. */
     FIRST_POSITION(-7, 10, "Erste Lage (Bund 0 bis 5)"),
+
+    /** C4 to E5: the natural notes a beginner fingers on the soprano recorder, F5 is not listed. */
+    RECORDER(-2, 7, "Blockflöte (c' bis e'')"),
 }
 
 /** A melody with rhythm: [beats] are note lengths in quarter notes, played at [bpm]. */

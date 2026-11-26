@@ -10,6 +10,18 @@ val keystoreProperties: Properties? = rootProject.file("keystore.properties")
     .takeIf { it.exists() }
     ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
+// CI has no keystore.properties and passes the same values through the environment instead.
+fun signingValue(variable: String, property: String): String? =
+    System.getenv(variable)?.takeIf { it.isNotBlank() } ?: keystoreProperties?.getProperty(property)
+
+val signingStore: String? = signingValue("KEYSTORE_FILE", "storeFile")
+val signingStorePassword: String? = signingValue("KEYSTORE_PASSWORD", "storePassword")
+val signingAlias: String? = signingValue("KEY_ALIAS", "keyAlias")
+val signingKeyPassword: String? = signingValue("KEY_PASSWORD", "keyPassword") ?: signingStorePassword
+
+// CI signs the APK itself with apksigner when it rotates to the shared key; Gradle leaves it unsigned.
+val unsignedRelease = System.getenv("UNSIGNED_RELEASE") == "true"
+
 android {
     namespace = "at.gigler.musictheorytrainer"
     // The Compose BOM needs at least API 37 to compile against; targetSdk stays at 36.
@@ -19,17 +31,17 @@ android {
         applicationId = "at.gigler.musictheorytrainer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.4.0"
+        versionCode = 9
+        versionName = "0.6.1"
     }
 
     signingConfigs {
-        if (keystoreProperties != null) {
+        if (signingStore != null) {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = rootProject.file(signingStore)
+                storePassword = signingStorePassword
+                keyAlias = signingAlias
+                keyPassword = signingKeyPassword
             }
         }
     }
@@ -39,7 +51,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = if (unsignedRelease) null else signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
